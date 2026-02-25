@@ -11,15 +11,8 @@ const linkStyle = ({ isActive }) => ({
 
 export default function Header() {
     return (
-        <header style={{ padding: 16, borderBottom: "1px solid #ddd" }}>
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                }}
-            >
+        <header style={{ borderBottom: "1px solid #ddd", background: "#fff" }}>
+            <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontWeight: 800 }}>ShopVerse</div>
 
                 <nav style={{ display: "flex", gap: 8 }}>

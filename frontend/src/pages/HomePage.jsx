@@ -35,25 +35,18 @@ export default function HomePage() {
     }, []);
 
     return (
-        <div style={{ padding: 24, display: "grid", gap: 16 }}>
+        <div className="container" style={{ display: "grid", gap: 16 }}>
             <div>
                 <h2 style={{ margin: 0 }}>{appName}</h2>
-                <p style={{ marginTop: 8, color: "#555" }}>
+                <p className="muted" style={{ marginTop: 8 }}>
                     Home page placeholder for Sprint 1.
                 </p>
             </div>
 
-            <div
-                style={{
-                    border: "1px solid #ddd",
-                    borderRadius: 12,
-                    padding: 16,
-                    background: "#fafafa",
-                }}
-            >
+            <div className="card">
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>Backend status</div>
 
-                {health.status === "loading" && <div style={{background:"#000000"}}>Loading…</div>}
+                {health.status === "loading" && <div>Loading…</div>}
 
                 {health.status === "ok" && (
                     <div style={{ display: "grid", gap: 6 }}>
@@ -63,13 +56,13 @@ export default function HomePage() {
                                 margin: 0,
                                 padding: 12,
                                 borderRadius: 10,
-                                background: "#fff",
+                                background: "#fafafa",
                                 border: "1px solid #eee",
                                 overflowX: "auto",
                             }}
                         >
-              {JSON.stringify(health.data, null, 2)}
-            </pre>
+            {JSON.stringify(health.data, null, 2)}
+          </pre>
                     </div>
                 )}
 
@@ -77,7 +70,7 @@ export default function HomePage() {
                     <div style={{ display: "grid", gap: 6 }}>
                         <div>❌ Not connected</div>
                         <div style={{ color: "#a00" }}>{health.error}</div>
-                        <div style={{ color: "#555", fontSize: 14 }}>
+                        <div className="muted" style={{ fontSize: 14 }}>
                             Make sure backend is running on <code>http://localhost:5000</code>{" "}
                             and CORS allows <code>http://localhost:5173</code>.
                         </div>
