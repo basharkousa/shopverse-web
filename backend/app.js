@@ -20,17 +20,20 @@ app.use(
 );
 
 // Simple route (temporary, for testing)
-app.get("/", (req, res) => {
-    res.json({ message: "ShopVerse backend is running" });
+app.get('/', (req, res) => {
+  res.json({ message: 'ShopVerse backend is running' });
 });
 
-// json parsing
-app.post("/echo",(req, res)=>{
-    res.json({youSent: req.body});
-});
+const authRoutes = require('./src/features/auth/auth.routes');
+
+app.use('/auth', authRoutes);
+
 
 const { testDbConnection } = require("./src/config/db");
 const asyncHandler = require("./src/utils/asyncHandler");
+
+
+
 
 // DB test route (temporary for Sprint 1)
 //before using asyncHandler
