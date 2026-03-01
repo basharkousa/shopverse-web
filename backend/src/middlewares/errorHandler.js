@@ -1,4 +1,4 @@
-module.exports = function errorHandler(err, req, res, next) {
+module.exports = function errorHandler(err, req, res,) {
     const statusCode = err.statusCode || 500;
 
     // Avoid leaking internal details in production
