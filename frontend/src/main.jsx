@@ -5,6 +5,10 @@ import { store } from "./store";
 
 import "./index.css";
 import App from "./App.jsx";
+import { loadMeThunk } from "./features/auth/authSlice";
+
+// ✅ run once on app start
+store.dispatch(loadMeThunk());
 
 ReactDOM.createRoot(document.getElementById("root")).render(
     <React.StrictMode>

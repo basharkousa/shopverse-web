@@ -1,4 +1,5 @@
-module.exports = function errorHandler(err, req, res, ) {
+// eslint-disable-next-line no-unused-vars
+module.exports = function errorHandler(err, req, res, next ) {
   // Postgres unique constraint (duplicate key), e.g. duplicate email
   if (err && err.code === '23505') {
     err.statusCode = 400;
