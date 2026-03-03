@@ -85,12 +85,12 @@ app.get(
 const errorHandler = require("./src/middlewares/errorHandler");
 const AppError = require("./src/utils/AppError");
 
-// 404 handler (no route matched)
+// 404 handler
 app.use((req, res, next) => {
-    next(new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404));
+  next(new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404));
 });
 
-// Global error handler (must be LAST)
+// Global error handler (LAST)
 app.use(errorHandler);
 
 

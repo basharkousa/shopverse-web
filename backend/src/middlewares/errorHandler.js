@@ -1,14 +1,19 @@
-module.exports = function errorHandler(err, req, res,) {
-    const statusCode = err.statusCode || 500;
+module.exports = function errorHandler(err, req, res, ) {
+  // Postgres unique constraint (duplicate key), e.g. duplicate email
+  if (err && err.code === '23505') {
+    err.statusCode = 400;
+    err.message = 'Duplicate value (already exists)';
+  }
 
-    // Avoid leaking internal details in production
-    const isProd = process.env.NODE_ENV === "production";
+  const statusCode = err.statusCode || 500;
 
-    res.status(statusCode).json({
-        ok: false,
-        message: err.message || "Unexpected error",
-        ...(isProd ? {} : { stack: err.stack }),
-    });
+  const isProd = process.env.NODE_ENV === 'production';
+
+  res.status(statusCode).json({
+    ok: false,
+    message: err.message || 'Unexpected error',
+    ...(isProd ? {} : { stack: err.stack }),
+  });
 };
 
 /*
