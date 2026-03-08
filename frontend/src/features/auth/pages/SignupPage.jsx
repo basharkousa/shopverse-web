@@ -13,6 +13,9 @@ export default function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [localError, setLocalError] = useState(null);
+
     // If signup succeeds, redirect to login
     useEffect(() => {
         // We consider signup success when we got a user and status succeeded
@@ -24,6 +27,13 @@ export default function SignupPage() {
     function onSubmit(e) {
         e.preventDefault();
         dispatch(clearAuthError());
+
+        setLocalError(null);
+
+        if (password !== confirmPassword) {
+            setLocalError("Passwords do not match");
+            return;
+        }
 
         dispatch(
             signupThunk({
@@ -54,6 +64,19 @@ export default function SignupPage() {
                         }}
                     >
                         {error}
+                    </div>
+                )}
+
+                {localError && (
+                    <div style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 10,
+                        border: "1px solid #f5c2c7",
+                        background: "#f8d7da",
+                        color: "#842029",
+                    }}>
+                        {localError}
                     </div>
                 )}
 
@@ -100,6 +123,23 @@ export default function SignupPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             type="password"
                             placeholder="At least 6 characters"
+                            required
+                            minLength={6}
+                            style={{
+                                padding: 10,
+                                borderRadius: 10,
+                                border: "1px solid #ddd",
+                            }}
+                        />
+                    </label>
+
+                    <label style={{ display: "grid", gap: 6 }}>
+                        <span style={{ fontWeight: 600 }}>Confirm Password</span>
+                        <input
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            type="password"
+                            placeholder="Repeat password"
                             required
                             minLength={6}
                             style={{
