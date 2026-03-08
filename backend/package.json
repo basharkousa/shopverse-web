@@ -8,6 +8,8 @@
     "dev": "nodemon server.js",
     "start": "node server.js",
     "db:schema": "node src/db/runSchema.js",
+    "db:migrate": "node src/db/runMigration.js",
+    "db:seed": "node src/db/runSeed.js",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

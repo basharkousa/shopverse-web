@@ -29,6 +29,9 @@ app.get('/', (req, res) => {
 const authRoutes = require('./src/features/auth/auth.routes');
 app.use('/auth', authRoutes);
 
+const productsRoutes = require('./src/features/products/products.routes');
+app.use('/products', productsRoutes);
+
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');
 
