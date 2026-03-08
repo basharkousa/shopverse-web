@@ -7,6 +7,7 @@ import SignupPage from "./features/auth/pages/SignupPage";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import ProfilePage from "./features/auth/pages/ProfilePage.jsx";
 import CatalogPage from "./features/products/pages/CatalogPage.jsx";
+import ProductDetailsPage from "./features/products/pages/ProductDetailsPage.jsx";
 
 const router = createBrowserRouter([
     {
@@ -18,6 +19,7 @@ const router = createBrowserRouter([
             {path: "login", element: <LoginPage/>},
             {path: "signup", element: <SignupPage/>},
             { path: "catalog", element: <CatalogPage /> },
+            { path: "products/:id", element: <ProductDetailsPage /> },
             {path: "profile", element:
                     <ProtectedRoute>
                         <ProfilePage/>

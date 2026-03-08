@@ -2,7 +2,7 @@ const { pool } = require('../../config/db');
 
 async function countProducts({ whereSql, params }) {
   const res = await pool.query(
-    `SELECT COUNT(*)::int AS count FROM products ${whereSql}`,
+    `SELECT COUNT(*)::int AS count FROM products p ${whereSql}`,
     params
   );
   return res.rows[0].count;
