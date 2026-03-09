@@ -24,7 +24,7 @@ npm -v
 shopvers/
   backend/
   frontend/
-  .github/            # CI workflows (optional)
+  .github/ # CI workflows 
   README.md
   .gitignore
 ```
@@ -101,38 +101,9 @@ Relations:
 
 ---
 
-## Common Issues
 
-### CORS / frontend can’t call backend
-Make sure backend `.env` includes:
-```env
-CLIENT_URL=http://localhost:5173
-```
-Then restart backend.
 
-Frontend `.env` must be:
-```env
-VITE_API_URL=http://localhost:5000
-```
-Then restart frontend.
-
-### Open the frontend on your phone (same Wi-Fi)
-Vite binds to localhost by default (PC only). Run:
-```bash
-npm run dev -- --host
-```
-Then open the `Network:` URL that Vite prints (example: `http://192.168.x.x:5173`).
-
-Important: On phone, `localhost` means the phone itself.
-So update `frontend/.env` on your PC to:
-```env
-VITE_API_URL=http://YOUR_PC_IP:5000
-```
-Restart frontend, and ensure Windows Firewall allows Node.js on Private network.
-
----
-
-## Git Branch Strategy (Recommended)
+## Git Branch Strategy 
 - main → stable
 - dev → integration
 - feature/<name> → working branches
