@@ -32,6 +32,9 @@ app.use('/auth', authRoutes);
 const productsRoutes = require('./src/features/products/products.routes');
 app.use('/products', productsRoutes);
 
+const categoriesRoutes = require('./src/features/categories/categories.routes');
+app.use('/categories', categoriesRoutes);
+
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');
 

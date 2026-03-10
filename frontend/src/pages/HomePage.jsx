@@ -1,6 +1,26 @@
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchHomeDataThunk } from "../features/home/homeSlice";
+import ProductCard from "../features/products/components/ProductCard";
+import { setFilters } from "../features/products/productsSlice";
 
 export default function HomePage() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
+    const { status, error, categories, featured, newArrivals } = useSelector(
+        (s) => s.home
+    );
+
+    useEffect(() => {
+        dispatch(fetchHomeDataThunk());
+    }, [dispatch]);
+
+    function onCategoryClick(catId) {
+        dispatch(setFilters({ category: String(catId) })); // sets + resets page
+        navigate("/catalog");
+    }
+
     return (
         <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
             {/* HERO */}
@@ -16,21 +36,16 @@ export default function HomePage() {
                 <div>
                     <h1 style={{ marginTop: 0, marginBottom: 8 }}>ShopVerse</h1>
                     <p className="muted" style={{ marginTop: 0, marginBottom: 16 }}>
-                        Discover great deals, new arrivals, and best sellers — all in one
-                        place.
+                        Discover best sellers, new arrivals, and special offers.
                     </p>
 
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <Link className="btn" to="/catalog">
-                            Shop Now
-                        </Link>
                         <Link className="btn" to="/catalog" style={{ textDecoration: "none" }}>
-                            Browse Catalog
+                            Shop Now
                         </Link>
                     </div>
                 </div>
 
-                {/* Image placeholder */}
                 <div
                     style={{
                         height: 180,
@@ -47,33 +62,28 @@ export default function HomePage() {
                 </div>
             </div>
 
-            {/* FEATURED */}
-            <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-                <h2 style={{ margin: 0 }}>Featured</h2>
+            {/* Loading / Error */}
+            {status === "loading" && (
+                <div className="card" style={{ marginTop: 12 }}>
+                    Loading home data…
+                </div>
+            )}
 
+            {status === "failed" && (
                 <div
+                    className="card"
                     style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(3, 1fr)",
-                        gap: 12,
+                        marginTop: 12,
+                        borderColor: "#f5c2c7",
+                        background: "#f8d7da",
+                        color: "#842029",
                     }}
                 >
-                    <div className="card">
-                        <h3 style={{ marginTop: 0 }}>Best Sellers</h3>
-                        <p className="muted">Top products people love.</p>
-                    </div>
-                    <div className="card">
-                        <h3 style={{ marginTop: 0 }}>New Arrivals</h3>
-                        <p className="muted">Fresh products added weekly.</p>
-                    </div>
-                    <div className="card">
-                        <h3 style={{ marginTop: 0 }}>Special Offers</h3>
-                        <p className="muted">Limited-time discounts.</p>
-                    </div>
+                    {error}
                 </div>
-            </div>
+            )}
 
-            {/* CATEGORIES */}
+            {/* Categories */}
             <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
                 <h2 style={{ margin: 0 }}>Shop by Category</h2>
 
@@ -84,23 +94,61 @@ export default function HomePage() {
                         gap: 12,
                     }}
                 >
-                    {["Electronics", "Fashion", "Home", "Sports"].map((c) => (
-                        <Link
-                            key={c}
-                            to="/catalog"
+                    {categories.map((c) => (
+                        <button
+                            key={c.id}
                             className="card"
-                            style={{ textDecoration: "none", color: "inherit" }}
+                            onClick={() => onCategoryClick(c.id)}
+                            style={{
+                                textAlign: "left",
+                                cursor: "pointer",
+                                border: "1px solid #e6e6e6",
+                            }}
                         >
-                            <div style={{ fontWeight: 800 }}>{c}</div>
+                            <div style={{ fontWeight: 800 }}>{c.name}</div>
                             <div className="muted" style={{ marginTop: 6 }}>
-                                Explore {c.toLowerCase()}
+                                Explore {c.name.toLowerCase()}
                             </div>
-                        </Link>
+                        </button>
                     ))}
                 </div>
             </div>
 
-            {/* BENEFITS */}
+            {/* Featured */}
+            <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                <h2 style={{ margin: 0 }}>Best Sellers</h2>
+
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 12,
+                    }}
+                >
+                    {featured.map((p) => (
+                        <ProductCard key={p.id} product={p} />
+                    ))}
+                </div>
+            </div>
+
+            {/* New Arrivals */}
+            <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+                <h2 style={{ margin: 0 }}>New Arrivals</h2>
+
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 12,
+                    }}
+                >
+                    {newArrivals.map((p) => (
+                        <ProductCard key={p.id} product={p} />
+                    ))}
+                </div>
+            </div>
+
+            {/* Benefits */}
             <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
                 <h2 style={{ margin: 0 }}>Why Shop With Us?</h2>
 
@@ -121,7 +169,7 @@ export default function HomePage() {
                     </div>
                     <div className="card">
                         <h3 style={{ marginTop: 0 }}>Easy Returns</h3>
-                        <p className="muted">Simple refund/return policy.</p>
+                        <p className="muted">Simple return policy.</p>
                     </div>
                 </div>
             </div>

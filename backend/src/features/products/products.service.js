@@ -1,5 +1,5 @@
 const AppError = require('../../utils/AppError');
-const { countProducts, listProducts,getProductById } = require('./products.repo');
+const { countProducts, listProducts,getProductById, buildOrder } = require('./products.repo');
 
 function parsePositiveInt(value, fallback) {
   const n = Number(value);
@@ -7,7 +7,7 @@ function parsePositiveInt(value, fallback) {
   return n;
 }
 
-function buildWhere({ q, category, minPrice, maxPrice, minRating }) {
+function buildWhere({ q, category, minPrice, maxPrice, minRating,}) {
   const params = [];
   const clauses = [];
 
@@ -96,6 +96,7 @@ async function getProducts({
   minPrice,
   maxPrice,
   minRating,
+  sort
 }) {
   const safePage = parsePositiveInt(page, 1);
   const safeLimit = parsePositiveInt(limit, 12);
@@ -113,11 +114,13 @@ async function getProducts({
     minRating,
   });
   const totalItems = await countProducts({ whereSql, params });
+  const orderSql = buildOrder(sort);
   const items = await listProducts({
     whereSql,
     params,
     limit: safeLimit,
     offset,
+    orderSql,
   });
 
   const totalPages = totalItems === 0 ? 0 : Math.ceil(totalItems / safeLimit);
@@ -143,4 +146,4 @@ async function getProductDetails(id) {
   return product;
 }
 
-module.exports = { getProducts,getProductDetails };
+module.exports = { getProducts, getProductDetails };

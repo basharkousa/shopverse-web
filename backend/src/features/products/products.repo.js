@@ -8,7 +8,15 @@ async function countProducts({ whereSql, params }) {
   return res.rows[0].count;
 }
 
-async function listProducts({ whereSql, params, limit, offset }) {
+function buildOrder(sort) {
+  const s = String(sort || '').trim();
+  if (s === 'topRated')
+    return 'ORDER BY p.rating DESC NULLS LAST, p.created_at DESC';
+  return 'ORDER BY p.created_at DESC'; // newest default
+}
+
+
+async function listProducts({ whereSql, params, limit, offset, orderSql }) {
   const res = await pool.query(
     `
     SELECT
@@ -21,7 +29,7 @@ async function listProducts({ whereSql, params, limit, offset }) {
       p.created_at
     FROM products p
     ${whereSql}
-    ORDER BY p.created_at DESC
+    ${orderSql}
     LIMIT $${params.length + 1}
     OFFSET $${params.length + 2}
     `,
@@ -56,4 +64,4 @@ async function getProductById(id) {
   return res.rows[0] || null;
 }
 
-module.exports = { countProducts, listProducts, getProductById };
+module.exports = { countProducts, listProducts, getProductById, buildOrder };

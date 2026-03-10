@@ -10,6 +10,7 @@ const listProductsController = asyncHandler(async (req, res) => {
     minPrice: req.query.minPrice,
     maxPrice: req.query.maxPrice,
     minRating: req.query.minRating,
+    sort: req.query.sort,
   });
 
   res.json({ ok: true, ...result });
