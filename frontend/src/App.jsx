@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import ProfilePage from "./features/auth/pages/ProfilePage.jsx";
 import CatalogPage from "./features/products/pages/CatalogPage.jsx";
 import ProductDetailsPage from "./features/products/pages/ProductDetailsPage.jsx";
+import CartPage from "./features/cart/pages/CartPage.jsx";
 
 const router = createBrowserRouter([
     {
@@ -24,6 +25,11 @@ const router = createBrowserRouter([
                     <ProtectedRoute>
                         <ProfilePage/>
                     </ProtectedRoute>},
+            {path: "Cart", element:
+                    <ProtectedRoute>
+                    <CartPage/>
+                    </ProtectedRoute>
+            },
 
         ],
     },

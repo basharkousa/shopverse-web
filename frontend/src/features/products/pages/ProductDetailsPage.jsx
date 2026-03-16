@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect,useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, Link } from "react-router-dom";
 import {
@@ -11,6 +11,8 @@ import {
     clearRelatedProducts,
     fetchRelatedProductsThunk,
 } from "../relatedProductsSlice";
+
+import { addToCart } from "../../cart/cartSlice";
 
 function formatPrice(priceCents) {
     const n = Number(priceCents || 0);
@@ -35,7 +37,7 @@ export default function ProductDetailsPage() {
     const dispatch = useDispatch();
 
     const { product, status, error } = useSelector((s) => s.productDetails);
-
+    const [cartMessage, setCartMessage] = useState("");
 
     useEffect(() => {
         dispatch(fetchProductDetailsThunk(id));
@@ -45,6 +47,27 @@ export default function ProductDetailsPage() {
     }, [dispatch, id]);
 
     const related = useSelector((s) => s.relatedProducts);
+
+    function handleAddToCart() {
+        if (!product || !inStock) return;
+
+        dispatch(
+            addToCart({
+                id: product.id,
+                title: product.title,
+                price_cents: product.price_cents,
+                image_url: product.image_url,
+                stock_qty: product.stock_qty,
+            })
+        );
+
+        setCartMessage("Added to cart");
+
+        window.clearTimeout(handleAddToCart._timer);
+        handleAddToCart._timer = window.setTimeout(() => {
+            setCartMessage("");
+        }, 1800);
+    }
 
     useEffect(() => {
         if (product?.category_id) {
@@ -171,11 +194,27 @@ export default function ProductDetailsPage() {
                         {product.description || "No description."}
                     </p>
 
-                    <button className="btn" disabled={!inStock} style={{ marginTop: 12 }}>
+                    <button
+                        className="btn"
+                        onClick={handleAddToCart}
+                        disabled={!inStock} style={{ marginTop: 12 }}>
                         Add to Cart
                     </button>
-
-                    {/* Optional: show category */}
+                    {cartMessage && (
+                        <div
+                            style={{
+                                marginTop: 10,
+                                padding: "10px 12px",
+                                borderRadius: 10,
+                                background: "#ebfbee",
+                                color: "#2b8a3e",
+                                fontWeight: 700,
+                                fontSize: 14,
+                            }}
+                        >
+                            {cartMessage}
+                        </div>
+                    )}
                     {product.category_name && (
                         <div className="muted" style={{ marginTop: 12, fontSize: 14 }}>
                             Category: <strong>{product.category_name}</strong>

@@ -83,7 +83,7 @@ export default function LoginPage() {
                         />
                     </label>
 
-                    <button className="btn" type="submit" disabled={status === "loading"}>
+                    <button className="btn btn-primary" type="submit" disabled={status === "loading"}>
                         {status === "loading" ? "Logging in..." : "Login"}
                     </button>
                 </form>

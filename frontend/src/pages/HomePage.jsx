@@ -40,7 +40,7 @@ export default function HomePage() {
                     </p>
 
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <Link className="btn" to="/catalog" style={{ textDecoration: "none" }}>
+                        <Link className="btn btn-primary" to="/catalog" style={{ textDecoration: "none" }}>
                             Shop Now
                         </Link>
                     </div>

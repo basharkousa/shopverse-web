@@ -1,4 +1,37 @@
-/* ===== CSS Reset (simple) ===== */
+/* ================================
+   ShopVerse — Green Commerce Theme
+   Design Tokens + Global Styles
+================================== */
+
+/* 1) Tokens */
+:root {
+  /* Brand greens */
+  --brand-50: #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-600: #059669;
+  --brand-700: #047857;
+
+  /* Neutrals */
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  /* Effects */
+  --radius: 14px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+
+  /* Spacing */
+  --s-1: 8px;
+  --s-2: 12px;
+  --s-3: 16px;
+  --s-4: 24px;
+}
+
+/* 2) Reset */
 * {
   box-sizing: border-box;
 }
@@ -11,50 +44,140 @@ body {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: #111;
-  background: #f7f7f8;
+  color: var(--text);
+  background: var(--bg);
 }
 
-/* App shell fills the screen */
+/* 3) Layout helpers */
+.container {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: var(--s-3);
+}
+
+/* App shell (footer sticks to bottom) */
 .app-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Main expands to push footer down */
 .app-main {
   flex: 1;
 }
 
-/* ===== Reusable Layout Helpers ===== */
-.container {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-  padding: 16px;
-}
-
-/* ===== Basic UI ===== */
+/* 4) Card */
 .card {
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 12px;
-  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s-3);
+  box-shadow: var(--shadow);
 }
 
-.btn {
-  border: 1px solid #ddd;
-  background: #fff;
-  border-radius: 10px;
+/* 5) Typography helpers */
+.muted {
+  color: var(--muted);
+}
+
+/* 6) Links */
+a {
+  color: var(--brand-700);
+}
+
+a:hover {
+  color: var(--brand-600);
+}
+
+/* 7) Inputs */
+.input,
+select,
+textarea {
+  width: 100%;
   padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  outline: none;
+}
+
+.input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18);
+}
+
+/* 8) Buttons */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--text);
+  transition: transform 0.05s ease, background 0.15s ease,
+  border-color 0.15s ease;
 }
 
 .btn:hover {
-  background: #f2f2f2;
+  background: #f3f4f6;
 }
 
-.muted {
-  color: #555;
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Primary CTA */
+.btn-primary {
+  background: var(--brand-600);
+  border-color: var(--brand-600);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+}
+
+/* 9) Simple responsive grid helpers */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-2);
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-2);
+}
+
+@media (max-width: 900px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .grid-4,
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
 }
