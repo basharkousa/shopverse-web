@@ -9,6 +9,7 @@ import ProfilePage from "./features/auth/pages/ProfilePage.jsx";
 import CatalogPage from "./features/products/pages/CatalogPage.jsx";
 import ProductDetailsPage from "./features/products/pages/ProductDetailsPage.jsx";
 import CartPage from "./features/cart/pages/CartPage.jsx";
+import CheckoutPage from "./features/checkout/pages/CheckoutPage.jsx";
 
 const router = createBrowserRouter([
     {
@@ -25,9 +26,14 @@ const router = createBrowserRouter([
                     <ProtectedRoute>
                         <ProfilePage/>
                     </ProtectedRoute>},
-            {path: "Cart", element:
+            {path: "cart", element:
                     <ProtectedRoute>
                     <CartPage/>
+                    </ProtectedRoute>
+            },
+            {path: "checkout", element:
+                    <ProtectedRoute>
+                    <CheckoutPage/>
                     </ProtectedRoute>
             },
 

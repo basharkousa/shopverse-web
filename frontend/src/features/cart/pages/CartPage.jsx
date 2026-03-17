@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
     removeFromCart,
@@ -8,12 +8,14 @@ import {
 } from "../cartSlice";
 import { formatMoney } from "../../../utils/formatMoney";
 
+
 const TAX_RATE = 0.1;
 const SHIPPING_CENTS = 500;
 
 export default function CartPage() {
     const dispatch = useDispatch();
     const items = useSelector(selectCartItems);
+    const navigate = useNavigate();
     const subtotalCents = useSelector(selectSubtotalCents);
 
     const taxCents = Math.round(subtotalCents * TAX_RATE);
@@ -21,6 +23,11 @@ export default function CartPage() {
     const totalCents = subtotalCents + taxCents + shippingCents;
 
     const isEmpty = items.length === 0;
+
+    function handleProceedToCheckout() {
+        if (isEmpty) return;
+        navigate("/checkout");
+    }
 
     function handleDecrease(item) {
         if (item.qty <= 1) return;
@@ -286,15 +293,13 @@ export default function CartPage() {
                     <button
                         className="btn btn-primary"
                         type="button"
-                        disabled
+                        onClick={handleProceedToCheckout}
+                        disabled={isEmpty}
                         style={{ width: "100%", marginTop: 16 }}
                     >
                         Proceed to Checkout
                     </button>
 
-                    <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>
-                        Checkout will be connected in the next card.
-                    </p>
                 </aside>
             </div>
         </div>
