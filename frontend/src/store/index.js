@@ -6,6 +6,7 @@ import productDetailsReducer from "../features/products/productDetailsSlice.js";
 import relatedProductsReducer from "../features/products/relatedProductsSlice.js";
 import homeReducer from "../features/home/homeSlice.js";
 import cartReducer from '../features/cart/cartSlice';
+import ordersReducer from "../features/orders/ordersSlice";
 
 export const store = configureStore({
     reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
         relatedProducts: relatedProductsReducer,
         home: homeReducer,
         cart: cartReducer,
+        orders: ordersReducer,
     },
 });

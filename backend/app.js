@@ -35,6 +35,9 @@ app.use('/products', productsRoutes);
 const categoriesRoutes = require('./src/features/categories/categories.routes');
 app.use('/categories', categoriesRoutes);
 
+const ordersRoutes = require('./src/features/orders/orders.routes');
+app.use('/orders', ordersRoutes);
+
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');
 

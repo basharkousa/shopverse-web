@@ -1,4 +1,12 @@
-import { useSelector } from "react-redux";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    fetchMyOrdersThunk,
+    selectOrders,
+    selectOrdersError,
+    selectOrdersStatus,
+} from "../../orders/ordersSlice";
 
 function formatDate(iso) {
     if (!iso) return "-";
@@ -10,16 +18,43 @@ function formatDate(iso) {
     });
 }
 
-export default function ProfilePage() {
-    const user = useSelector((s) => s.auth.user);
+function formatMoney(cents) {
+    return `€${(Number(cents || 0) / 100).toFixed(2)}`;
+}
 
-    // Placeholder for Sprint Orders (later you'll fetch real orders)
-    const orders = []; // e.g. [{ id, date, total, status }]
+export default function ProfilePage() {
+    const dispatch = useDispatch();
+    const location = useLocation();
+
+    const user = useSelector((s) => s.auth.user);
+    const orders = useSelector(selectOrders);
+    const ordersStatus = useSelector(selectOrdersStatus);
+    const ordersError = useSelector(selectOrdersError);
+
+    const orderSuccess = location.state?.orderSuccess;
+
+    useEffect(() => {
+        if (ordersStatus === "idle") {
+            dispatch(fetchMyOrdersThunk());
+        }
+    }, [dispatch, ordersStatus]);
 
     return (
         <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
             <div style={{ display: "grid", gap: 16 }}>
-                {/* Profile info */}
+                {orderSuccess && (
+                    <div
+                        className="card"
+                        style={{
+                            background: "#ebfbee",
+                            borderColor: "#b2f2bb",
+                            color: "#2b8a3e",
+                        }}
+                    >
+                        {orderSuccess}
+                    </div>
+                )}
+
                 <div className="card">
                     <div
                         style={{
@@ -37,7 +72,6 @@ export default function ProfilePage() {
                             </p>
                         </div>
 
-                        {/* Optional for now */}
                         <button className="btn" type="button" disabled>
                             Edit Profile (Coming Soon)
                         </button>
@@ -83,7 +117,6 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Orders */}
                 <div className="card">
                     <div
                         style={{
@@ -99,6 +132,26 @@ export default function ProfilePage() {
                             Track order status (Pending / Paid / Shipped / Cancelled)
                         </div>
                     </div>
+
+                    {ordersStatus === "loading" && (
+                        <div style={{ marginTop: 12 }} className="muted">
+                            Loading orders...
+                        </div>
+                    )}
+
+                    {ordersStatus === "failed" && (
+                        <div
+                            className="card"
+                            style={{
+                                marginTop: 12,
+                                background: "#fff5f5",
+                                borderColor: "#ffc9c9",
+                                color: "#c92a2a",
+                            }}
+                        >
+                            {ordersError}
+                        </div>
+                    )}
 
                     <div style={{ marginTop: 12, overflowX: "auto" }}>
                         <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -120,7 +173,7 @@ export default function ProfilePage() {
                             </thead>
 
                             <tbody>
-                            {orders.length === 0 ? (
+                            {ordersStatus !== "loading" && orders.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} style={{ padding: 16 }} className="muted">
                                         No orders yet.
@@ -133,10 +186,10 @@ export default function ProfilePage() {
                                             #{o.id}
                                         </td>
                                         <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            {formatDate(o.date)}
+                                            {formatDate(o.created_at)}
                                         </td>
                                         <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            €{(o.totalCents / 100).toFixed(2)}
+                                            {formatMoney(o.total_cents)}
                                         </td>
                                         <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
                                             <StatusTag status={o.status} />
@@ -156,7 +209,6 @@ export default function ProfilePage() {
 function StatusTag({ status }) {
     const s = String(status || "").toLowerCase();
 
-    // simple color tags (guide style)
     let bg = "#f2f2f2";
     let color = "#333";
 
@@ -186,7 +238,7 @@ function StatusTag({ status }) {
                 fontSize: 12,
             }}
         >
-      {(status || "Pending").toString()}
-    </span>
+            {(status || "Pending").toString()}
+        </span>
     );
 }

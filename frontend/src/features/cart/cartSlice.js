@@ -1,7 +1,29 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice,createAsyncThunk } from '@reduxjs/toolkit';
+import { api } from "../../shared/api/client";
+
+export const placeOrderThunk = createAsyncThunk(
+    "cart/placeOrder",
+    async ({ shipping, items }, thunkAPI) => {
+        try {
+            const res = await api.post("/orders", {
+                shipping,
+                items,
+            });
+
+            return res.data.order;
+        } catch (err) {
+            const msg =
+                err?.response?.data?.message || err?.message || "Order failed";
+            return thunkAPI.rejectWithValue(msg);
+        }
+    }
+);
 
 const initialState = {
     items: [],
+    checkoutStatus: "idle",
+    checkoutError: null,
+    lastOrder: null,
 };
 
 const cartSlice = createSlice({
@@ -58,7 +80,30 @@ const cartSlice = createSlice({
         clearCart: (state) => {
             state.items = [];
         },
+
+        clearCheckoutState: (state) => {
+            state.checkoutStatus = "idle";
+            state.checkoutError = null;
+        },
     },
+    extraReducers: (builder) => {
+        builder
+            .addCase(placeOrderThunk.pending, (state) => {
+                state.checkoutStatus = "loading";
+                state.checkoutError = null;
+            })
+            .addCase(placeOrderThunk.fulfilled, (state, action) => {
+                state.checkoutStatus = "succeeded";
+                state.checkoutError = null;
+                state.lastOrder = action.payload;
+                state.items = [];
+            })
+            .addCase(placeOrderThunk.rejected, (state, action) => {
+                state.checkoutStatus = "failed";
+                state.checkoutError = action.payload || "Order failed";
+            });
+    },
+
 });
 
 export const {
@@ -66,6 +111,7 @@ export const {
     removeFromCart,
     updateQty,
     clearCart,
+    clearCheckoutState,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;
@@ -85,3 +131,7 @@ export const selectItemSubtotalCents = (productId) => (state) => {
     const item = state.cart.items.find((item) => item.id === productId);
     return item ? item.price_cents * item.qty : 0;
 };
+
+export const selectCheckoutStatus = (state) => state.cart.checkoutStatus;
+export const selectCheckoutError = (state) => state.cart.checkoutError;
+export const selectLastOrder = (state) => state.cart.lastOrder;

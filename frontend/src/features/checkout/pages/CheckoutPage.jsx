@@ -1,9 +1,13 @@
 import { Link, Navigate } from "react-router-dom";
-import { useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useMemo, useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
+    placeOrderThunk,
     selectCartItems,
     selectSubtotalCents,
+    selectCheckoutError,
+    selectCheckoutStatus,
+    clearCheckoutState,
 } from "../../cart/cartSlice";
 import { formatMoney } from "../../../utils/formatMoney";
 
@@ -35,8 +39,12 @@ function validateShipping(values) {
 }
 
 export default function CheckoutPage() {
+    const dispatch = useDispatch();
+
     const items = useSelector(selectCartItems);
     const subtotalCents = useSelector(selectSubtotalCents);
+    const checkoutStatus = useSelector(selectCheckoutStatus);
+    const checkoutError = useSelector(selectCheckoutError);
     const user = useSelector((s) => s.auth.user);
 
     const [shipping, setShipping] = useState({
@@ -57,16 +65,18 @@ export default function CheckoutPage() {
 
     const isEmpty = items.length === 0;
 
-    if (isEmpty) {
-        return <Navigate to="/catalog" replace />;
-    }
+    useEffect(() => {
+        return () => {
+            dispatch(clearCheckoutState());
+        };
+    }, [dispatch]);
+
+    const errors = useMemo(() => validateShipping(shipping), [shipping]);
+    const isFormValid = Object.keys(errors).length === 0;
 
     const taxCents = Math.round(subtotalCents * TAX_RATE);
     const shippingCents = SHIPPING_CENTS;
     const totalCents = subtotalCents + taxCents + shippingCents;
-
-    const errors = useMemo(() => validateShipping(shipping), [shipping]);
-    const isFormValid = Object.keys(errors).length === 0;
 
     function handleChange(e) {
         const { name, value } = e.target;
@@ -104,11 +114,29 @@ export default function CheckoutPage() {
             return;
         }
 
-        // Card 10: submit POST /orders here
-        console.log("Checkout valid, ready for submit:", {
-            shipping,
-            items,
-        });
+        dispatch(
+            placeOrderThunk({
+                shipping,
+                items: items.map((item) => ({
+                    product_id: item.id,
+                    quantity: item.qty,
+                })),
+            })
+        );
+    }
+
+    if (checkoutStatus === "succeeded") {
+        return (
+            <Navigate
+                to="/profile"
+                replace
+                state={{ orderSuccess: "Your order was placed successfully." }}
+            />
+        );
+    }
+
+    if (isEmpty && checkoutStatus !== "loading") {
+        return <Navigate to="/catalog" replace />;
     }
 
     return (
@@ -123,20 +151,6 @@ export default function CheckoutPage() {
                     marginBottom: 16,
                 }}
             >
-
-                {submitAttempted && !isFormValid && (
-                    <div
-                        className="card"
-                        style={{
-                            background: "#fff5f5",
-                            borderColor: "#ffc9c9",
-                            color: "#c92a2a",
-                            marginBottom: 16,
-                        }}
-                    >
-                        Please fill in all required shipping fields before confirming your order.
-                    </div>
-                )}
                 <div>
                     <h1 style={{ margin: 0 }}>Checkout</h1>
                     <p className="muted" style={{ margin: "6px 0 0" }}>
@@ -150,6 +164,34 @@ export default function CheckoutPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
+                {submitAttempted && !isFormValid && (
+                    <div
+                        className="card"
+                        style={{
+                            background: "#fff5f5",
+                            borderColor: "#ffc9c9",
+                            color: "#c92a2a",
+                            marginBottom: 16,
+                        }}
+                    >
+                        Please fill in all required shipping fields before confirming your order.
+                    </div>
+                )}
+
+                {checkoutError && (
+                    <div
+                        className="card"
+                        style={{
+                            background: "#fff5f5",
+                            borderColor: "#ffc9c9",
+                            color: "#c92a2a",
+                            marginBottom: 16,
+                        }}
+                    >
+                        {checkoutError}
+                    </div>
+                )}
+
                 <div
                     style={{
                         display: "grid",
@@ -218,7 +260,7 @@ export default function CheckoutPage() {
                                         value={shipping.city}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
-                                        aria-invalid={Boolean(showError("city"))}
+                                        aria-invalid={showError("city")}
                                     />
                                     {showError("city") && (
                                         <div
@@ -250,7 +292,7 @@ export default function CheckoutPage() {
                                         value={shipping.address}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
-                                        aria-invalid={Boolean(showError("address"))}
+                                        aria-invalid={showError("address")}
                                     />
                                     {showError("address") && (
                                         <div
@@ -282,7 +324,7 @@ export default function CheckoutPage() {
                                         value={shipping.phone}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
-                                        aria-invalid={Boolean(showError("phone"))}
+                                        aria-invalid={showError("phone")}
                                     />
                                     {showError("phone") && (
                                         <div
@@ -412,13 +454,14 @@ export default function CheckoutPage() {
                         <button
                             className="btn btn-primary"
                             type="submit"
+                            disabled={checkoutStatus === "loading"}
                             style={{ width: "100%", marginTop: 16 }}
                         >
-                            Confirm Order
+                            {checkoutStatus === "loading" ? "Placing Order..." : "Confirm Order"}
                         </button>
 
                         <p className="muted" style={{ marginTop: 10, fontSize: 13 }}>
-                            Order submission will be connected in Card 10.
+                            Your order will be created after confirmation.
                         </p>
                     </aside>
                 </div>
