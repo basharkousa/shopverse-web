@@ -547,3 +547,18 @@ textarea:focus {
     flex-direction: column;
   }
 }
+
+.admin-thumb-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-thumb-list__img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}

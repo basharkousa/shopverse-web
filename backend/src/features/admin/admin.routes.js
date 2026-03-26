@@ -1,5 +1,6 @@
 const express = require('express');
 const requireAdmin = require('../../middlewares/requireAdmin');
+const uploadProductImages = require('../../middlewares/uploadProductImages');
 const { getAdminOverviewController } = require('./admin.controller');
 const {
   listAdminProductsController,
@@ -31,8 +32,16 @@ router.get('/', (req, res) => {
 router.get('/overview', getAdminOverviewController);
 
 router.get('/products', listAdminProductsController);
-router.post('/products', createAdminProductController);
-router.put('/products/:id', updateAdminProductController);
+router.post(
+  '/products',
+  uploadProductImages.array('images', 8),
+  createAdminProductController
+);
+router.put(
+  '/products/:id',
+  uploadProductImages.array('images', 8),
+  updateAdminProductController
+);
 router.delete('/products/:id', deleteAdminProductController);
 
 router.get('/orders', listAdminOrdersController);

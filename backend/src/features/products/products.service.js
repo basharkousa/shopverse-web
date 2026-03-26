@@ -105,10 +105,54 @@ function cleanNullableText(value) {
   return v || null;
 }
 
-async function validateAndNormalizeProductInput(payload) {
+function normalizeImageUrls(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v || '').trim()).filter(Boolean);
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => String(v || '').trim()).filter(Boolean);
+    }
+    // eslint-disable-next-line no-unused-vars
+  } catch (_) {
+    // ignore parse error and try newline/comma fallback
+  }
+
+  return raw
+    .split(/\r?\n|,/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function buildUploadedUrls(files, req) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  return files.map((file) => `${baseUrl}/uploads/products/${file.filename}`);
+}
+
+function mergeUniqueUrls(...lists) {
+  const merged = lists
+    .flat()
+    .map((x) => String(x || '').trim())
+    .filter(Boolean);
+  return [...new Set(merged)];
+}
+
+async function validateAndNormalizeProductInput(
+  payload,
+  req,
+  existingProduct = null
+) {
   const title = cleanString(payload.title);
   const description = cleanNullableText(payload.description);
-  const imageUrl = cleanNullableText(payload.image_url);
 
   const priceCents = Number(payload.price_cents);
   const categoryId = Number(payload.category_id);
@@ -146,11 +190,33 @@ async function validateAndNormalizeProductInput(payload) {
     throw new AppError('category_id does not exist', 400);
   }
 
+  const manualImageUrl = cleanNullableText(payload.image_url);
+  const manualExtraUrls = normalizeImageUrls(payload.image_urls);
+  const uploadedUrls = buildUploadedUrls(req.files, req);
+
+  let imageUrls = mergeUniqueUrls(
+    existingProduct?.image_urls || [],
+    manualImageUrl ? [manualImageUrl] : [],
+    manualExtraUrls,
+    uploadedUrls
+  );
+
+  if (payload.replace_images === 'true') {
+    imageUrls = mergeUniqueUrls(
+      manualImageUrl ? [manualImageUrl] : [],
+      manualExtraUrls,
+      uploadedUrls
+    );
+  }
+
+  const imageUrl = imageUrls[0] || null;
+
   return {
     title,
     description,
     priceCents,
     imageUrl,
+    imageUrls,
     categoryId,
     rating: Number(ratingRaw.toFixed(1)),
     stockQty,
@@ -222,12 +288,12 @@ async function getAdminProducts() {
   return await listAdminProducts();
 }
 
-async function createAdminProduct(payload) {
-  const normalized = await validateAndNormalizeProductInput(payload);
+async function createAdminProduct(payload, req) {
+  const normalized = await validateAndNormalizeProductInput(payload, req);
   return await createProduct(normalized);
 }
 
-async function updateAdminProduct(id, payload) {
+async function updateAdminProduct(id, payload, req) {
   const productId = Number(id);
   if (!Number.isInteger(productId) || productId <= 0) {
     throw new AppError('id must be a positive integer', 400);
@@ -238,7 +304,11 @@ async function updateAdminProduct(id, payload) {
     throw new AppError('Product not found', 404);
   }
 
-  const normalized = await validateAndNormalizeProductInput(payload);
+  const normalized = await validateAndNormalizeProductInput(
+    payload,
+    req,
+    existing
+  );
   return await updateProductById(productId, normalized);
 }
 

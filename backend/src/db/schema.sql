@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     price_cents INT NOT NULL CHECK (price_cents >= 0),
     image_url TEXT,
+    image_urls TEXT[] NOT NULL DEFAULT '{}',
     category_id INT REFERENCES categories(id) ON DELETE SET NULL,
     rating NUMERIC(2,1) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
     stock_qty INT NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),

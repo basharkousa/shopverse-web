@@ -6,42 +6,45 @@ function formatPrice(priceCents) {
 }
 
 export default function ProductCard({ product }) {
+    const imageUrl =
+        (Array.isArray(product.image_urls) && product.image_urls[0]) ||
+        product.image_url ||
+        "";
+
     return (
-        <div className="card" style={{ display: "grid", gap: 10 }}>
+        <div className="card" style={{ overflow: "hidden" }}>
             <div
                 style={{
-                    height: 140,
-                    borderRadius: 10,
-                    border: "1px solid #eee",
+                    height: 180,
+                    borderRadius: 12,
                     background: "#fafafa",
+                    border: "1px solid #eee",
                     overflow: "hidden",
-                    display: "grid",
-                    placeItems: "center",
                 }}
             >
-                {product?.image_url ? (
+                {imageUrl ? (
                     <img
-                        src={product.image_url}
+                        src={imageUrl}
                         alt={product.title}
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        loading="lazy"
                     />
                 ) : (
-                    <span className="muted">No Image</span>
+                    <div
+                        className="muted"
+                        style={{ width: "100%", height: "100%", display: "grid", placeItems: "center" }}
+                    >
+                        No Image
+                    </div>
                 )}
             </div>
 
-            <div style={{ fontWeight: 800, lineHeight: 1.2 }}>
-                {product?.title || "Untitled"}
+            <h3 style={{ marginBottom: 8 }}>{product.title}</h3>
+
+            <div className="muted" style={{ marginBottom: 8 }}>
+                {formatPrice(product.price_cents)}
             </div>
 
-            <div className="muted">{formatPrice(product?.price_cents)}</div>
-
-            <Link
-                className="btn"
-                to={`/products/${product.id}`}
-                style={{ textDecoration: "none", textAlign: "center" }}
-            >
+            <Link className="btn" to={`/products/${product.id}`} style={{ textDecoration: "none" }}>
                 View Details
             </Link>
         </div>

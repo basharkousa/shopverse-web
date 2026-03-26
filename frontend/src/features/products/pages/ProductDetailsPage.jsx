@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, Link } from "react-router-dom";
 import {
@@ -21,7 +21,7 @@ function formatPrice(priceCents) {
 
 function Stars({ rating }) {
     const r = Number(rating || 0);
-    const full = Math.round(r); // simple for now
+    const full = Math.round(r);
     return (
         <div className="muted" style={{ display: "flex", gap: 2 }}>
             {Array.from({ length: 5 }).map((_, i) => (
@@ -37,7 +37,10 @@ export default function ProductDetailsPage() {
     const dispatch = useDispatch();
 
     const { product, status, error } = useSelector((s) => s.productDetails);
+    const related = useSelector((s) => s.relatedProducts);
+
     const [cartMessage, setCartMessage] = useState("");
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     useEffect(() => {
         dispatch(fetchProductDetailsThunk(id));
@@ -46,7 +49,30 @@ export default function ProductDetailsPage() {
         };
     }, [dispatch, id]);
 
-    const related = useSelector((s) => s.relatedProducts);
+    useEffect(() => {
+        if (product?.category_id) {
+            dispatch(
+                fetchRelatedProductsThunk({
+                    categoryId: product.category_id,
+                    excludeId: product.id,
+                })
+            );
+        }
+
+        return () => {
+            dispatch(clearRelatedProducts());
+        };
+    }, [dispatch, product?.category_id, product?.id]);
+
+    useEffect(() => {
+        setActiveImageIndex(0);
+    }, [product?.id]);
+
+    const imageList = useMemo(() => {
+        const urls = Array.isArray(product?.image_urls) ? product.image_urls.filter(Boolean) : [];
+        if (urls.length > 0) return urls;
+        return product?.image_url ? [product.image_url] : [];
+    }, [product]);
 
     function handleAddToCart() {
         if (!product || !inStock) return;
@@ -68,21 +94,6 @@ export default function ProductDetailsPage() {
             setCartMessage("");
         }, 1800);
     }
-
-    useEffect(() => {
-        if (product?.category_id) {
-            dispatch(
-                fetchRelatedProductsThunk({
-                    categoryId: product.category_id,
-                    excludeId: product.id,
-                })
-            );
-        }
-
-        return () => {
-            dispatch(clearRelatedProducts());
-        };
-    }, [dispatch, product?.category_id, product?.id]);
 
     if (status === "loading") {
         return (
@@ -123,6 +134,7 @@ export default function ProductDetailsPage() {
     }
 
     const inStock = Number(product.stock_qty || 0) > 0;
+    const activeImage = imageList[activeImageIndex] || null;
 
     return (
         <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
@@ -139,7 +151,6 @@ export default function ProductDetailsPage() {
                     alignItems: "start",
                 }}
             >
-                {/* Image */}
                 <div className="card" style={{ padding: 12 }}>
                     <div
                         style={{
@@ -152,9 +163,9 @@ export default function ProductDetailsPage() {
                             placeItems: "center",
                         }}
                     >
-                        {product.image_url ? (
+                        {activeImage ? (
                             <img
-                                src={product.image_url}
+                                src={activeImage}
                                 alt={product.title}
                                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
                             />
@@ -162,9 +173,39 @@ export default function ProductDetailsPage() {
                             <span className="muted">No Image</span>
                         )}
                     </div>
+
+                    {imageList.length > 1 && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                            {imageList.map((url, idx) => (
+                                <button
+                                    key={`${url}-${idx}`}
+                                    type="button"
+                                    onClick={() => setActiveImageIndex(idx)}
+                                    style={{
+                                        width: 64,
+                                        height: 64,
+                                        padding: 0,
+                                        borderRadius: 10,
+                                        overflow: "hidden",
+                                        border:
+                                            idx === activeImageIndex
+                                                ? "2px solid var(--brand-600)"
+                                                : "1px solid #ddd",
+                                        background: "#fff",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    <img
+                                        src={url}
+                                        alt={`${product.title}-${idx + 1}`}
+                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
-                {/* Details */}
                 <div className="card">
                     <h2 style={{ marginTop: 0 }}>{product.title}</h2>
 
@@ -175,19 +216,19 @@ export default function ProductDetailsPage() {
                     </div>
 
                     <div style={{ marginTop: 8 }}>
-            <span
-                style={{
-                    display: "inline-block",
-                    padding: "4px 10px",
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    fontSize: 12,
-                    background: inStock ? "#ebfbee" : "#fff5f5",
-                    color: inStock ? "#2b8a3e" : "#c92a2a",
-                }}
-            >
-              {inStock ? "Available" : "Out of stock"}
-            </span>
+                        <span
+                            style={{
+                                display: "inline-block",
+                                padding: "4px 10px",
+                                borderRadius: 999,
+                                fontWeight: 800,
+                                fontSize: 12,
+                                background: inStock ? "#ebfbee" : "#fff5f5",
+                                color: inStock ? "#2b8a3e" : "#c92a2a",
+                            }}
+                        >
+                            {inStock ? "Available" : "Out of stock"}
+                        </span>
                     </div>
 
                     <p className="muted" style={{ marginTop: 14 }}>
@@ -197,9 +238,12 @@ export default function ProductDetailsPage() {
                     <button
                         className="btn"
                         onClick={handleAddToCart}
-                        disabled={!inStock} style={{ marginTop: 12 }}>
+                        disabled={!inStock}
+                        style={{ marginTop: 12 }}
+                    >
                         Add to Cart
                     </button>
+
                     {cartMessage && (
                         <div
                             style={{
@@ -215,6 +259,7 @@ export default function ProductDetailsPage() {
                             {cartMessage}
                         </div>
                     )}
+
                     {product.category_name && (
                         <div className="muted" style={{ marginTop: 12, fontSize: 14 }}>
                             Category: <strong>{product.category_name}</strong>

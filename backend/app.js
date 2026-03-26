@@ -2,15 +2,20 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 const app = express();
 
 // ----- Middleware (order matters) -----
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json());
 
-// ----- CORS (ONE config only) -----
+// ----- CORS -----
 const corsOptions = {
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
@@ -20,6 +25,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+
+// ----- Static uploads -----
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ----- Routes -----
 app.get('/', (req, res) => {
@@ -75,7 +83,7 @@ app.get(
   })
 );
 
-// ----- Error handling (LAST) -----
+// ----- Error handling -----
 const errorHandler = require('./src/middlewares/errorHandler');
 const AppError = require('./src/utils/AppError');
 

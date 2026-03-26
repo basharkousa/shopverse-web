@@ -34,12 +34,12 @@ const listAdminProductsController = asyncHandler(async (req, res) => {
 });
 
 const createAdminProductController = asyncHandler(async (req, res) => {
-  const product = await createAdminProduct(req.body);
+  const product = await createAdminProduct(req.body, req);
   res.status(201).json({ ok: true, product });
 });
 
 const updateAdminProductController = asyncHandler(async (req, res) => {
-  const product = await updateAdminProduct(req.params.id, req.body);
+  const product = await updateAdminProduct(req.params.id, req.body, req);
   res.json({ ok: true, product });
 });
 

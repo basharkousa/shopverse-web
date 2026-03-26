@@ -6,9 +6,11 @@ const EMPTY_FORM = {
     description: "",
     price_cents: "",
     image_url: "",
+    image_urls: "",
     category_id: "",
     rating: "",
     stock_qty: "",
+    replace_images: false,
 };
 
 function formatMoney(cents) {
@@ -27,21 +29,6 @@ function formatDate(value) {
     }
 }
 
-function normalizeForm(values) {
-    return {
-        title: values.title.trim(),
-        description: values.description.trim(),
-        price_cents: Number(values.price_cents),
-        image_url: values.image_url.trim(),
-        category_id: Number(values.category_id),
-        rating:
-            values.rating === "" || values.rating === null
-                ? 0
-                : Number(values.rating),
-        stock_qty: Number(values.stock_qty),
-    };
-}
-
 export default function AdminProductsPage() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -55,6 +42,7 @@ export default function AdminProductsPage() {
     const [deletingProduct, setDeletingProduct] = useState(null);
 
     const [form, setForm] = useState(EMPTY_FORM);
+    const [selectedFiles, setSelectedFiles] = useState([]);
     const [formError, setFormError] = useState("");
     const [submitStatus, setSubmitStatus] = useState("idle");
 
@@ -72,7 +60,7 @@ export default function AdminProductsPage() {
             ]);
 
             setProducts(productsRes.data.items || []);
-            setCategories(categoriesRes.data.categories || []);
+            setCategories(categoriesRes.data.categories || categoriesRes.data.items || []);
             setStatus("succeeded");
         } catch (err) {
             setError(
@@ -99,6 +87,7 @@ export default function AdminProductsPage() {
     function openAddForm() {
         setEditingProduct(null);
         setForm(EMPTY_FORM);
+        setSelectedFiles([]);
         setFormError("");
         setSubmitStatus("idle");
         setIsFormOpen(true);
@@ -114,6 +103,7 @@ export default function AdminProductsPage() {
                     ? ""
                     : String(product.price_cents),
             image_url: product.image_url || "",
+            image_urls: Array.isArray(product.image_urls) ? product.image_urls.join("\n") : "",
             category_id:
                 product.category_id === null || product.category_id === undefined
                     ? ""
@@ -126,7 +116,9 @@ export default function AdminProductsPage() {
                 product.stock_qty === null || product.stock_qty === undefined
                     ? ""
                     : String(product.stock_qty),
+            replace_images: false,
         });
+        setSelectedFiles([]);
         setFormError("");
         setSubmitStatus("idle");
         setIsFormOpen(true);
@@ -137,6 +129,7 @@ export default function AdminProductsPage() {
         setIsFormOpen(false);
         setEditingProduct(null);
         setForm(EMPTY_FORM);
+        setSelectedFiles([]);
         setFormError("");
     }
 
@@ -156,6 +149,11 @@ export default function AdminProductsPage() {
 
     function updateField(name, value) {
         setForm((prev) => ({ ...prev, [name]: value }));
+    }
+
+    function onFilesChange(e) {
+        const files = Array.from(e.target.files || []);
+        setSelectedFiles(files);
     }
 
     function validateForm() {
@@ -181,6 +179,25 @@ export default function AdminProductsPage() {
         return "";
     }
 
+    function buildFormData() {
+        const fd = new FormData();
+        fd.append("title", form.title.trim());
+        fd.append("description", form.description.trim());
+        fd.append("price_cents", String(Number(form.price_cents)));
+        fd.append("image_url", form.image_url.trim());
+        fd.append("image_urls", form.image_urls.trim());
+        fd.append("category_id", String(Number(form.category_id)));
+        fd.append("rating", form.rating === "" ? "0" : String(Number(form.rating)));
+        fd.append("stock_qty", String(Number(form.stock_qty)));
+        fd.append("replace_images", String(Boolean(form.replace_images)));
+
+        for (const file of selectedFiles) {
+            fd.append("images", file);
+        }
+
+        return fd;
+    }
+
     async function onSubmitForm(e) {
         e.preventDefault();
 
@@ -194,19 +211,17 @@ export default function AdminProductsPage() {
         setFormError("");
 
         try {
-            const payload = normalizeForm(form);
+            const payload = buildFormData();
 
             if (editingProduct) {
                 const res = await api.put(`/admin/products/${editingProduct.id}`, payload);
                 const updated = res.data.product;
-
                 setProducts((prev) =>
                     prev.map((item) => (item.id === updated.id ? updated : item))
                 );
             } else {
                 const res = await api.post("/admin/products", payload);
                 const created = res.data.product;
-
                 setProducts((prev) => [created, ...prev]);
             }
 
@@ -252,7 +267,7 @@ export default function AdminProductsPage() {
                     <div>
                         <h1 style={{ margin: 0 }}>Products</h1>
                         <p className="muted" style={{ margin: "6px 0 0" }}>
-                            Manage catalog products, stock, category, and pricing.
+                            Manage catalog products, stock, category, pricing, and images.
                         </p>
                     </div>
 
@@ -291,6 +306,7 @@ export default function AdminProductsPage() {
                                 <th>Price</th>
                                 <th>Rating</th>
                                 <th>Stock</th>
+                                <th>Photos</th>
                                 <th>Created</th>
                                 <th></th>
                             </tr>
@@ -355,6 +371,7 @@ export default function AdminProductsPage() {
                                                     : "Out of stock"}
                                             </span>
                                     </td>
+                                    <td>{Array.isArray(product.image_urls) ? product.image_urls.length : (product.image_url ? 1 : 0)}</td>
                                     <td>{formatDate(product.created_at)}</td>
                                     <td>
                                         <div className="admin-row-actions">
@@ -473,14 +490,70 @@ export default function AdminProductsPage() {
                             </label>
 
                             <label className="admin-field admin-field--full">
-                                <span>Image URL</span>
+                                <span>Primary Image URL (optional)</span>
                                 <input
                                     className="input"
                                     value={form.image_url}
                                     onChange={(e) => updateField("image_url", e.target.value)}
-                                    placeholder="https://example.com/image.jpg"
+                                    placeholder="https://example.com/cover.jpg"
                                 />
                             </label>
+
+                            <label className="admin-field admin-field--full">
+                                <span>Extra Image URLs (optional, one per line)</span>
+                                <textarea
+                                    rows={4}
+                                    value={form.image_urls}
+                                    onChange={(e) => updateField("image_urls", e.target.value)}
+                                    placeholder={`https://example.com/photo-1.jpg\nhttps://example.com/photo-2.jpg`}
+                                />
+                            </label>
+
+                            <label className="admin-field admin-field--full">
+                                <span>Upload Photos</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={onFilesChange}
+                                />
+                                {selectedFiles.length > 0 && (
+                                    <div className="muted" style={{ fontSize: 14 }}>
+                                        {selectedFiles.length} file(s) selected
+                                    </div>
+                                )}
+                            </label>
+
+                            {editingProduct && (
+                                <label className="admin-field admin-field--full">
+                                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={form.replace_images}
+                                            onChange={(e) =>
+                                                updateField("replace_images", e.target.checked)
+                                            }
+                                        />
+                                        Replace existing images instead of adding to them
+                                    </span>
+                                </label>
+                            )}
+
+                            {editingProduct && Array.isArray(editingProduct.image_urls) && editingProduct.image_urls.length > 0 && (
+                                <div className="admin-field admin-field--full">
+                                    <span>Current Photos</span>
+                                    <div className="admin-thumb-list">
+                                        {editingProduct.image_urls.map((url, idx) => (
+                                            <img
+                                                key={`${url}-${idx}`}
+                                                src={url}
+                                                alt={`product-${idx}`}
+                                                className="admin-thumb-list__img"
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {formError && (
                                 <div className="admin-alert admin-alert--error admin-field--full">

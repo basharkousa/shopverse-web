@@ -25,7 +25,10 @@ async function listProducts({ whereSql, params, limit, offset, orderSql }) {
         p.description,
         p.price_cents,
         p.image_url,
+        p.image_urls,
         p.category_id,
+        p.rating,
+        p.stock_qty,
         p.created_at
       FROM products p
         ${whereSql}
@@ -48,6 +51,7 @@ async function getProductById(id) {
         p.description,
         p.price_cents,
         p.image_url,
+        p.image_urls,
         p.category_id,
         p.rating,
         p.stock_qty,
@@ -67,20 +71,21 @@ async function getProductById(id) {
 async function listAdminProducts() {
   const res = await pool.query(
     `
-    SELECT
-      p.id,
-      p.title,
-      p.description,
-      p.price_cents,
-      p.image_url,
-      p.category_id,
-      c.name AS category_name,
-      p.rating,
-      p.stock_qty,
-      p.created_at
-    FROM products p
-    LEFT JOIN categories c ON c.id = p.category_id
-    ORDER BY p.created_at DESC, p.id DESC
+      SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.price_cents,
+        p.image_url,
+        p.image_urls,
+        p.category_id,
+        c.name AS category_name,
+        p.rating,
+        p.stock_qty,
+        p.created_at
+      FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+      ORDER BY p.created_at DESC, p.id DESC
     `
   );
 
@@ -90,10 +95,10 @@ async function listAdminProducts() {
 async function getCategoryById(id) {
   const res = await pool.query(
     `
-    SELECT id, name
-    FROM categories
-    WHERE id = $1
-    LIMIT 1
+      SELECT id, name
+      FROM categories
+      WHERE id = $1
+        LIMIT 1
     `,
     [id]
   );
@@ -106,25 +111,36 @@ async function createProduct({
   description,
   priceCents,
   imageUrl,
+  imageUrls,
   categoryId,
   rating,
   stockQty,
 }) {
   const res = await pool.query(
     `
-    INSERT INTO products (
+      INSERT INTO products (
+        title,
+        description,
+        price_cents,
+        image_url,
+        image_urls,
+        category_id,
+        rating,
+        stock_qty
+      )
+      VALUES ($1, $2, $3, $4, $5::text[], $6, $7, $8)
+        RETURNING id
+    `,
+    [
       title,
       description,
-      price_cents,
-      image_url,
-      category_id,
+      priceCents,
+      imageUrl,
+      imageUrls,
+      categoryId,
       rating,
-      stock_qty
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING id
-    `,
-    [title, description, priceCents, imageUrl, categoryId, rating, stockQty]
+      stockQty,
+    ]
   );
 
   return getProductById(res.rows[0].id);
@@ -132,23 +148,43 @@ async function createProduct({
 
 async function updateProductById(
   id,
-  { title, description, priceCents, imageUrl, categoryId, rating, stockQty }
+  {
+    title,
+    description,
+    priceCents,
+    imageUrl,
+    imageUrls,
+    categoryId,
+    rating,
+    stockQty,
+  }
 ) {
   const res = await pool.query(
     `
-    UPDATE products
-    SET
-      title = $2,
-      description = $3,
-      price_cents = $4,
-      image_url = $5,
-      category_id = $6,
-      rating = $7,
-      stock_qty = $8
-    WHERE id = $1
-    RETURNING id
+      UPDATE products
+      SET
+        title = $2,
+        description = $3,
+        price_cents = $4,
+        image_url = $5,
+        image_urls = $6::text[],
+      category_id = $7,
+        rating = $8,
+        stock_qty = $9
+      WHERE id = $1
+        RETURNING id
     `,
-    [id, title, description, priceCents, imageUrl, categoryId, rating, stockQty]
+    [
+      id,
+      title,
+      description,
+      priceCents,
+      imageUrl,
+      imageUrls,
+      categoryId,
+      rating,
+      stockQty,
+    ]
   );
 
   if (!res.rows[0]) return null;
@@ -158,9 +194,9 @@ async function updateProductById(
 async function deleteProductById(id) {
   const res = await pool.query(
     `
-    DELETE FROM products
-    WHERE id = $1
-    RETURNING id
+      DELETE FROM products
+      WHERE id = $1
+        RETURNING id
     `,
     [id]
   );
