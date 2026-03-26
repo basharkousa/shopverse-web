@@ -1,5 +1,6 @@
 const express = require('express');
 const requireAdmin = require('../../middlewares/requireAdmin');
+const { getAdminOverviewController } = require('./admin.controller');
 const {
   listAdminProductsController,
   createAdminProductController,
@@ -26,6 +27,8 @@ router.get('/', (req, res) => {
     },
   });
 });
+
+router.get('/overview', getAdminOverviewController);
 
 router.get('/products', listAdminProductsController);
 router.post('/products', createAdminProductController);

@@ -10,6 +10,12 @@ import CatalogPage from "./features/products/pages/CatalogPage.jsx";
 import ProductDetailsPage from "./features/products/pages/ProductDetailsPage.jsx";
 import CartPage from "./features/cart/pages/CartPage.jsx";
 import CheckoutPage from "./features/checkout/pages/CheckoutPage.jsx";
+import AdminDashboardPage from "./features/admin/pages/AdminDashboardPage.jsx";
+import AdminProductsPage from "./features/admin/pages/AdminProductsPage.jsx";
+import AdminOrdersPage from "./features/admin/pages/AdminOrdersPage.jsx";
+import AdminOrderDetailsPage from "./features/admin/pages/AdminOrderDetailsPage.jsx";
+import AdminRoute from "./components/AdminRoute.jsx";
+import AdminLayout from "./components/AdminLayout.jsx";
 
 const router = createBrowserRouter([
     {
@@ -35,6 +41,21 @@ const router = createBrowserRouter([
                     <ProtectedRoute>
                     <CheckoutPage/>
                     </ProtectedRoute>
+            },
+
+            {
+                path: "admin",
+                element: (
+                    <AdminRoute>
+                        <AdminLayout />
+                    </AdminRoute>
+                ),
+                children: [
+                    { index: true, element: <AdminDashboardPage /> },
+                    { path: "products", element: <AdminProductsPage /> },
+                    { path: "orders", element: <AdminOrdersPage /> },
+                    { path: "orders/:id", element: <AdminOrderDetailsPage /> },
+                ],
             },
 
         ],
