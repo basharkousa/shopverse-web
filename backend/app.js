@@ -19,7 +19,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options(/.*/, cors(corsOptions)); // ✅ preflight for all routes (fixes the "*" crash)
+app.options(/.*/, cors(corsOptions));
 
 // ----- Routes -----
 app.get('/', (req, res) => {
@@ -37,6 +37,9 @@ app.use('/categories', categoriesRoutes);
 
 const ordersRoutes = require('./src/features/orders/orders.routes');
 app.use('/orders', ordersRoutes);
+
+const adminRoutes = require('./src/features/admin/admin.routes');
+app.use('/admin', adminRoutes);
 
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');

@@ -10,28 +10,28 @@ async function countProducts({ whereSql, params }) {
 
 function buildOrder(sort) {
   const s = String(sort || '').trim();
-  if (s === 'topRated')
+  if (s === 'topRated') {
     return 'ORDER BY p.rating DESC NULLS LAST, p.created_at DESC';
-  return 'ORDER BY p.created_at DESC'; // newest default
+  }
+  return 'ORDER BY p.created_at DESC';
 }
-
 
 async function listProducts({ whereSql, params, limit, offset, orderSql }) {
   const res = await pool.query(
     `
-    SELECT
-      p.id,
-      p.title,
-      p.description,
-      p.price_cents,
-      p.image_url,
-      p.category_id,
-      p.created_at
-    FROM products p
-    ${whereSql}
-    ${orderSql}
-    LIMIT $${params.length + 1}
-    OFFSET $${params.length + 2}
+      SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.price_cents,
+        p.image_url,
+        p.category_id,
+        p.created_at
+      FROM products p
+        ${whereSql}
+        ${orderSql}
+        LIMIT $${params.length + 1}
+      OFFSET $${params.length + 2}
     `,
     [...params, limit, offset]
   );
@@ -42,6 +42,31 @@ async function listProducts({ whereSql, params, limit, offset, orderSql }) {
 async function getProductById(id) {
   const res = await pool.query(
     `
+      SELECT
+        p.id,
+        p.title,
+        p.description,
+        p.price_cents,
+        p.image_url,
+        p.category_id,
+        p.rating,
+        p.stock_qty,
+        p.created_at,
+        c.name AS category_name
+      FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+      WHERE p.id = $1
+        LIMIT 1
+    `,
+    [id]
+  );
+
+  return res.rows[0] || null;
+}
+
+async function listAdminProducts() {
+  const res = await pool.query(
+    `
     SELECT
       p.id,
       p.title,
@@ -49,13 +74,25 @@ async function getProductById(id) {
       p.price_cents,
       p.image_url,
       p.category_id,
+      c.name AS category_name,
       p.rating,
       p.stock_qty,
-      p.created_at,
-      c.name AS category_name
+      p.created_at
     FROM products p
     LEFT JOIN categories c ON c.id = p.category_id
-    WHERE p.id = $1
+    ORDER BY p.created_at DESC, p.id DESC
+    `
+  );
+
+  return res.rows;
+}
+
+async function getCategoryById(id) {
+  const res = await pool.query(
+    `
+    SELECT id, name
+    FROM categories
+    WHERE id = $1
     LIMIT 1
     `,
     [id]
@@ -64,4 +101,81 @@ async function getProductById(id) {
   return res.rows[0] || null;
 }
 
-module.exports = { countProducts, listProducts, getProductById, buildOrder };
+async function createProduct({
+  title,
+  description,
+  priceCents,
+  imageUrl,
+  categoryId,
+  rating,
+  stockQty,
+}) {
+  const res = await pool.query(
+    `
+    INSERT INTO products (
+      title,
+      description,
+      price_cents,
+      image_url,
+      category_id,
+      rating,
+      stock_qty
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id
+    `,
+    [title, description, priceCents, imageUrl, categoryId, rating, stockQty]
+  );
+
+  return getProductById(res.rows[0].id);
+}
+
+async function updateProductById(
+  id,
+  { title, description, priceCents, imageUrl, categoryId, rating, stockQty }
+) {
+  const res = await pool.query(
+    `
+    UPDATE products
+    SET
+      title = $2,
+      description = $3,
+      price_cents = $4,
+      image_url = $5,
+      category_id = $6,
+      rating = $7,
+      stock_qty = $8
+    WHERE id = $1
+    RETURNING id
+    `,
+    [id, title, description, priceCents, imageUrl, categoryId, rating, stockQty]
+  );
+
+  if (!res.rows[0]) return null;
+  return getProductById(res.rows[0].id);
+}
+
+async function deleteProductById(id) {
+  const res = await pool.query(
+    `
+    DELETE FROM products
+    WHERE id = $1
+    RETURNING id
+    `,
+    [id]
+  );
+
+  return res.rows[0] || null;
+}
+
+module.exports = {
+  countProducts,
+  buildOrder,
+  listProducts,
+  getProductById,
+  listAdminProducts,
+  getCategoryById,
+  createProduct,
+  updateProductById,
+  deleteProductById,
+};

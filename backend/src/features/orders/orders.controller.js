@@ -1,6 +1,12 @@
 const asyncHandler = require('../../utils/asyncHandler');
+const {
+  createOrder,
+  getMyOrders,
+  getAdminOrdersList,
+  getAdminOrderDetails,
+  updateAdminOrderStatus,
+} = require('./orders.service');
 
-const { createOrder } = require('./orders.service');
 const createOrderController = asyncHandler(async (req, res) => {
   const order = await createOrder({
     userId: req.user.id,
@@ -14,7 +20,6 @@ const createOrderController = asyncHandler(async (req, res) => {
   });
 });
 
-const { getMyOrders } = require('./orders.service');
 const getMyOrdersController = asyncHandler(async (req, res) => {
   const orders = await getMyOrders(req.user.id);
 
@@ -24,4 +29,38 @@ const getMyOrdersController = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createOrderController,getMyOrdersController };
+const listAdminOrdersController = asyncHandler(async (req, res) => {
+  const orders = await getAdminOrdersList();
+
+  res.json({
+    ok: true,
+    orders,
+  });
+});
+
+const getAdminOrderDetailsController = asyncHandler(async (req, res) => {
+  const order = await getAdminOrderDetails(req.params.id);
+
+  res.json({
+    ok: true,
+    order,
+  });
+});
+
+const updateAdminOrderStatusController = asyncHandler(async (req, res) => {
+  const order = await updateAdminOrderStatus(req.params.id, req.body.status);
+
+  res.json({
+    ok: true,
+    message: 'Order status updated successfully',
+    order,
+  });
+});
+
+module.exports = {
+  createOrderController,
+  getMyOrdersController,
+  listAdminOrdersController,
+  getAdminOrderDetailsController,
+  updateAdminOrderStatusController,
+};

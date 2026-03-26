@@ -1,9 +1,15 @@
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/db');
+const { isValidOrderStatus } = require('../admin/admin.constants');
 const {
   getProductsForOrder,
   insertOrder,
   insertOrderItem,
+  getOrdersByUserId,
+  getAdminOrders,
+  getAdminOrderHeaderById,
+  getOrderItemsByOrderId,
+  updateOrderStatusById,
 } = require('./orders.repo');
 
 function cleanString(value) {
@@ -47,6 +53,15 @@ function normalizeItems(items) {
 
     return { product_id: productId, quantity };
   });
+}
+
+function mapShipping(order) {
+  return {
+    name: order.shipping_name,
+    city: order.shipping_city,
+    address: order.shipping_address,
+    phone: order.shipping_phone,
+  };
 }
 
 async function createOrder({ userId, shipping, items }) {
@@ -114,6 +129,10 @@ async function createOrder({ userId, shipping, items }) {
         userId,
         status: 'pending',
         totalCents,
+        shippingName: cleanShipping.name,
+        shippingCity: cleanShipping.city,
+        shippingAddress: cleanShipping.address,
+        shippingPhone: cleanShipping.phone,
       },
       client
     );
@@ -137,7 +156,7 @@ async function createOrder({ userId, shipping, items }) {
       status: order.status,
       total_cents: order.total_cents,
       created_at: order.created_at,
-      shipping: cleanShipping,
+      shipping: mapShipping(order),
       items: preparedItems,
     };
   } catch (err) {
@@ -148,10 +167,112 @@ async function createOrder({ userId, shipping, items }) {
   }
 }
 
-const { getOrdersByUserId } = require('./orders.repo');
-
 async function getMyOrders(userId) {
-  return getOrdersByUserId(userId);
+  const orders = await getOrdersByUserId(userId);
+
+  return orders.map((order) => ({
+    id: order.id,
+    created_at: order.created_at,
+    total_cents: order.total_cents,
+    status: order.status,
+    shipping: mapShipping(order),
+  }));
 }
 
-module.exports = { createOrder, getMyOrders };
+async function getAdminOrdersList() {
+  const orders = await getAdminOrders();
+
+  return orders.map((order) => ({
+    id: order.id,
+    created_at: order.created_at,
+    total_cents: order.total_cents,
+    status: order.status,
+    customer: {
+      id: order.user_id,
+      name: order.customer_name,
+      email: order.customer_email,
+    },
+  }));
+}
+
+async function getAdminOrderDetails(orderId) {
+  const id = Number(orderId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new AppError('id must be a positive integer', 400);
+  }
+
+  const header = await getAdminOrderHeaderById(id);
+  if (!header) {
+    throw new AppError('Order not found', 404);
+  }
+
+  const items = await getOrderItemsByOrderId(id);
+
+  return {
+    id: header.id,
+    created_at: header.created_at,
+    total_cents: header.total_cents,
+    status: header.status,
+    customer: {
+      id: header.user_id,
+      name: header.customer_name,
+      email: header.customer_email,
+    },
+    shipping: mapShipping(header),
+    items: items.map((item) => ({
+      id: item.id,
+      product_id: item.product_id,
+      product_title: item.product_title,
+      product_image_url: item.product_image_url,
+      quantity: item.quantity,
+      unit_price_cents: item.unit_price_cents,
+      line_total_cents: item.unit_price_cents * item.quantity,
+    })),
+  };
+}
+
+async function updateAdminOrderStatus(orderId, status) {
+  const id = Number(orderId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new AppError('id must be a positive integer', 400);
+  }
+
+  const nextStatus = cleanString(status).toLowerCase();
+  if (!isValidOrderStatus(nextStatus)) {
+    throw new AppError(
+      'status must be one of: pending, paid, shipped, cancelled',
+      400
+    );
+  }
+
+  const existing = await getAdminOrderHeaderById(id);
+  if (!existing) {
+    throw new AppError('Order not found', 404);
+  }
+
+  const updated = await updateOrderStatusById(id, nextStatus);
+  if (!updated) {
+    throw new AppError('Order not found', 404);
+  }
+
+  return {
+    id: updated.id,
+    created_at: updated.created_at,
+    total_cents: updated.total_cents,
+    status: updated.status,
+    customer: {
+      id: existing.user_id,
+      name: existing.customer_name,
+      email: existing.customer_email,
+    },
+    shipping: mapShipping(updated),
+  };
+}
+
+module.exports = {
+  createOrder,
+  getMyOrders,
+  getAdminOrdersList,
+  getAdminOrderDetails,
+  updateAdminOrderStatus,
+};

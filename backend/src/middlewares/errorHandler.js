@@ -1,13 +1,16 @@
 // eslint-disable-next-line no-unused-vars
-module.exports = function errorHandler(err, req, res, next ) {
-  // Postgres unique constraint (duplicate key), e.g. duplicate email
+module.exports = function errorHandler(err, req, res, next) {
   if (err && err.code === '23505') {
     err.statusCode = 400;
     err.message = 'Duplicate value (already exists)';
   }
 
-  const statusCode = err.statusCode || 500;
+  if (err && err.code === '23503') {
+    err.statusCode = 400;
+    err.message = 'Operation blocked by related records';
+  }
 
+  const statusCode = err.statusCode || 500;
   const isProd = process.env.NODE_ENV === 'production';
 
   res.status(statusCode).json({
@@ -16,7 +19,6 @@ module.exports = function errorHandler(err, req, res, next ) {
     ...(isProd ? {} : { stack: err.stack }),
   });
 };
-
 /*
 * What it does:
 

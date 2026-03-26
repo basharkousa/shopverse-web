@@ -1,5 +1,12 @@
 const asyncHandler = require('../../utils/asyncHandler');
-const { getProducts, getProductDetails } = require('./products.service');
+const {
+  getProducts,
+  getProductDetails,
+  getAdminProducts,
+  createAdminProduct,
+  updateAdminProduct,
+  deleteAdminProduct,
+} = require('./products.service');
 
 const listProductsController = asyncHandler(async (req, res) => {
   const result = await getProducts({
@@ -21,8 +28,35 @@ const getProductDetailsController = asyncHandler(async (req, res) => {
   res.json({ ok: true, product });
 });
 
+const listAdminProductsController = asyncHandler(async (req, res) => {
+  const items = await getAdminProducts();
+  res.json({ ok: true, items });
+});
+
+const createAdminProductController = asyncHandler(async (req, res) => {
+  const product = await createAdminProduct(req.body);
+  res.status(201).json({ ok: true, product });
+});
+
+const updateAdminProductController = asyncHandler(async (req, res) => {
+  const product = await updateAdminProduct(req.params.id, req.body);
+  res.json({ ok: true, product });
+});
+
+const deleteAdminProductController = asyncHandler(async (req, res) => {
+  const deleted = await deleteAdminProduct(req.params.id);
+  res.json({
+    ok: true,
+    message: 'Product deleted successfully',
+    deleted,
+  });
+});
+
 module.exports = {
   listProductsController,
-  getProductDetails,
   getProductDetailsController,
+  listAdminProductsController,
+  createAdminProductController,
+  updateAdminProductController,
+  deleteAdminProductController,
 };

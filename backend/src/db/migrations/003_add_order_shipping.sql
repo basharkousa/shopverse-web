@@ -1,0 +1,11 @@
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS shipping_name VARCHAR(120);
+
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS shipping_city VARCHAR(120);
+
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS shipping_address TEXT;
+
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS shipping_phone VARCHAR(40);
