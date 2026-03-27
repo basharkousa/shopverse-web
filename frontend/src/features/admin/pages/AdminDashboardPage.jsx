@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../../../shared/api/client";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    fetchAdminOverviewThunk,
+    selectAdminOverview,
+    selectAdminOverviewStatus,
+    selectAdminOverviewError,
+} from "../adminOverviewSlice";
 
 function formatMoney(cents) {
     return new Intl.NumberFormat("en-US", {
@@ -20,7 +26,6 @@ function formatDate(value) {
 
 function statusLabelClass(status) {
     const value = String(status || "").toLowerCase();
-
     if (value === "paid") return "status-pill status-pill--paid";
     if (value === "shipped") return "status-pill status-pill--shipped";
     if (value === "cancelled") return "status-pill status-pill--cancelled";
@@ -28,48 +33,24 @@ function statusLabelClass(status) {
 }
 
 export default function AdminDashboardPage() {
-    const [overview, setOverview] = useState(null);
-    const [status, setStatus] = useState("idle");
-    const [error, setError] = useState("");
+    const dispatch = useDispatch();
+    const overview = useSelector(selectAdminOverview);
+    const status = useSelector(selectAdminOverviewStatus);
+    const error = useSelector(selectAdminOverviewError);
 
     useEffect(() => {
-        let ignore = false;
+        dispatch(fetchAdminOverviewThunk());
+    }, [dispatch]);
 
-        async function loadOverview() {
-            setStatus("loading");
-            setError("");
-
-            try {
-                const res = await api.get("/admin/overview");
-                if (!ignore) {
-                    setOverview(res.data.overview);
-                    setStatus("succeeded");
-                }
-            } catch (err) {
-                if (!ignore) {
-                    setError(
-                        err?.response?.data?.message ||
-                        err?.message ||
-                        "Failed to load admin overview"
-                    );
-                    setStatus("failed");
-                }
-            }
-        }
-
-        loadOverview();
-        return () => {
-            ignore = true;
-        };
-    }, []);
-
-    const totals = useMemo(() => {
-        return overview?.totals || {
-            products: 0,
-            orders: 0,
-            sales_cents: 0,
-        };
-    }, [overview]);
+    const totals = useMemo(
+        () =>
+            overview?.totals || {
+                products: 0,
+                orders: 0,
+                sales_cents: 0,
+            },
+        [overview]
+    );
 
     const recentOrders = overview?.recent_orders || [];
 
@@ -81,9 +62,7 @@ export default function AdminDashboardPage() {
                     <div className="admin-stat-card__value">
                         {status === "loading" ? "..." : totals.products}
                     </div>
-                    <div className="muted admin-stat-card__hint">
-                        Products currently in catalog
-                    </div>
+                    <div className="muted admin-stat-card__hint">Products currently in catalog</div>
                 </div>
 
                 <div className="card admin-stat-card">
@@ -91,9 +70,7 @@ export default function AdminDashboardPage() {
                     <div className="admin-stat-card__value">
                         {status === "loading" ? "..." : totals.orders}
                     </div>
-                    <div className="muted admin-stat-card__hint">
-                        Orders placed by customers
-                    </div>
+                    <div className="muted admin-stat-card__hint">Orders placed by customers</div>
                 </div>
 
                 <div className="card admin-stat-card">
@@ -101,9 +78,7 @@ export default function AdminDashboardPage() {
                     <div className="admin-stat-card__value">
                         {status === "loading" ? "..." : formatMoney(totals.sales_cents)}
                     </div>
-                    <div className="muted admin-stat-card__hint">
-                        Sum of all order totals
-                    </div>
+                    <div className="muted admin-stat-card__hint">Sum of all order totals</div>
                 </div>
             </section>
 
@@ -121,7 +96,6 @@ export default function AdminDashboardPage() {
                     <Link to="/admin/products" className="btn btn-primary">
                         Manage Products
                     </Link>
-
                     <Link to="/admin/orders" className="btn">
                         View Orders
                     </Link>
@@ -149,17 +123,7 @@ export default function AdminDashboardPage() {
                 )}
 
                 {status === "failed" && (
-                    <div
-                        style={{
-                            border: "1px solid #fecaca",
-                            background: "#fef2f2",
-                            color: "#991b1b",
-                            borderRadius: 12,
-                            padding: 12,
-                        }}
-                    >
-                        {error}
-                    </div>
+                    <div className="admin-alert admin-alert--error">{error}</div>
                 )}
 
                 {status === "succeeded" && recentOrders.length === 0 && (
@@ -181,7 +145,6 @@ export default function AdminDashboardPage() {
                                 <th></th>
                             </tr>
                             </thead>
-
                             <tbody>
                             {recentOrders.map((order) => (
                                 <tr key={order.id}>

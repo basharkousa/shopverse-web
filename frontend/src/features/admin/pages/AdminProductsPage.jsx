@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../../../shared/api/client";
+import { useDispatch, useSelector } from "react-redux";
+import {
+    fetchAdminProductsThunk,
+    createAdminProductThunk,
+    updateAdminProductThunk,
+    deleteAdminProductThunk,
+    clearAdminProductSubmitState,
+    clearAdminProductDeleteState,
+    selectAdminProducts,
+    selectAdminProductCategories,
+    selectAdminProductsStatus,
+    selectAdminProductsError,
+    selectAdminProductSubmitStatus,
+    selectAdminProductSubmitError,
+    selectAdminProductDeleteStatus,
+    selectAdminProductDeleteError,
+} from "../adminProductsSlice";
 
 const EMPTY_FORM = {
     title: "",
@@ -30,51 +46,28 @@ function formatDate(value) {
 }
 
 export default function AdminProductsPage() {
-    const [products, setProducts] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [status, setStatus] = useState("idle");
-    const [error, setError] = useState("");
+    const dispatch = useDispatch();
+
+    const products = useSelector(selectAdminProducts);
+    const categories = useSelector(selectAdminProductCategories);
+    const status = useSelector(selectAdminProductsStatus);
+    const error = useSelector(selectAdminProductsError);
+    const submitStatus = useSelector(selectAdminProductSubmitStatus);
+    const submitError = useSelector(selectAdminProductSubmitError);
+    const deleteStatus = useSelector(selectAdminProductDeleteStatus);
+    const deleteError = useSelector(selectAdminProductDeleteError);
 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-
     const [editingProduct, setEditingProduct] = useState(null);
     const [deletingProduct, setDeletingProduct] = useState(null);
-
     const [form, setForm] = useState(EMPTY_FORM);
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [formError, setFormError] = useState("");
-    const [submitStatus, setSubmitStatus] = useState("idle");
-
-    const [deleteError, setDeleteError] = useState("");
-    const [deleteStatus, setDeleteStatus] = useState("idle");
-
-    async function loadPageData() {
-        setStatus("loading");
-        setError("");
-
-        try {
-            const [productsRes, categoriesRes] = await Promise.all([
-                api.get("/admin/products"),
-                api.get("/categories"),
-            ]);
-
-            setProducts(productsRes.data.items || []);
-            setCategories(categoriesRes.data.categories || categoriesRes.data.items || []);
-            setStatus("succeeded");
-        } catch (err) {
-            setError(
-                err?.response?.data?.message ||
-                err?.message ||
-                "Failed to load admin products"
-            );
-            setStatus("failed");
-        }
-    }
+    const [localFormError, setLocalFormError] = useState("");
 
     useEffect(() => {
-        loadPageData();
-    }, []);
+        dispatch(fetchAdminProductsThunk());
+    }, [dispatch]);
 
     const categoryMap = useMemo(() => {
         const map = new Map();
@@ -85,66 +78,54 @@ export default function AdminProductsPage() {
     }, [categories]);
 
     function openAddForm() {
+        dispatch(clearAdminProductSubmitState());
         setEditingProduct(null);
         setForm(EMPTY_FORM);
         setSelectedFiles([]);
-        setFormError("");
-        setSubmitStatus("idle");
+        setLocalFormError("");
         setIsFormOpen(true);
     }
 
     function openEditForm(product) {
+        dispatch(clearAdminProductSubmitState());
         setEditingProduct(product);
         setForm({
             title: product.title || "",
             description: product.description || "",
-            price_cents:
-                product.price_cents === null || product.price_cents === undefined
-                    ? ""
-                    : String(product.price_cents),
+            price_cents: product.price_cents == null ? "" : String(product.price_cents),
             image_url: product.image_url || "",
             image_urls: Array.isArray(product.image_urls) ? product.image_urls.join("\n") : "",
-            category_id:
-                product.category_id === null || product.category_id === undefined
-                    ? ""
-                    : String(product.category_id),
-            rating:
-                product.rating === null || product.rating === undefined
-                    ? ""
-                    : String(product.rating),
-            stock_qty:
-                product.stock_qty === null || product.stock_qty === undefined
-                    ? ""
-                    : String(product.stock_qty),
+            category_id: product.category_id == null ? "" : String(product.category_id),
+            rating: product.rating == null ? "" : String(product.rating),
+            stock_qty: product.stock_qty == null ? "" : String(product.stock_qty),
             replace_images: false,
         });
         setSelectedFiles([]);
-        setFormError("");
-        setSubmitStatus("idle");
+        setLocalFormError("");
         setIsFormOpen(true);
     }
 
     function closeForm() {
         if (submitStatus === "loading") return;
+        dispatch(clearAdminProductSubmitState());
         setIsFormOpen(false);
         setEditingProduct(null);
         setForm(EMPTY_FORM);
         setSelectedFiles([]);
-        setFormError("");
+        setLocalFormError("");
     }
 
     function openDeleteModal(product) {
+        dispatch(clearAdminProductDeleteState());
         setDeletingProduct(product);
-        setDeleteError("");
-        setDeleteStatus("idle");
         setIsDeleteOpen(true);
     }
 
     function closeDeleteModal() {
         if (deleteStatus === "loading") return;
-        setIsDeleteOpen(false);
+        dispatch(clearAdminProductDeleteState());
         setDeletingProduct(null);
-        setDeleteError("");
+        setIsDeleteOpen(false);
     }
 
     function updateField(name, value) {
@@ -152,8 +133,7 @@ export default function AdminProductsPage() {
     }
 
     function onFilesChange(e) {
-        const files = Array.from(e.target.files || []);
-        setSelectedFiles(files);
+        setSelectedFiles(Array.from(e.target.files || []));
     }
 
     function validateForm() {
@@ -190,11 +170,7 @@ export default function AdminProductsPage() {
         fd.append("rating", form.rating === "" ? "0" : String(Number(form.rating)));
         fd.append("stock_qty", String(Number(form.stock_qty)));
         fd.append("replace_images", String(Boolean(form.replace_images)));
-
-        for (const file of selectedFiles) {
-            fd.append("images", file);
-        }
-
+        selectedFiles.forEach((file) => fd.append("images", file));
         return fd;
     }
 
@@ -203,60 +179,33 @@ export default function AdminProductsPage() {
 
         const validationError = validateForm();
         if (validationError) {
-            setFormError(validationError);
+            setLocalFormError(validationError);
             return;
         }
 
-        setSubmitStatus("loading");
-        setFormError("");
+        setLocalFormError("");
+        const formData = buildFormData();
 
-        try {
-            const payload = buildFormData();
-
-            if (editingProduct) {
-                const res = await api.put(`/admin/products/${editingProduct.id}`, payload);
-                const updated = res.data.product;
-                setProducts((prev) =>
-                    prev.map((item) => (item.id === updated.id ? updated : item))
-                );
-            } else {
-                const res = await api.post("/admin/products", payload);
-                const created = res.data.product;
-                setProducts((prev) => [created, ...prev]);
-            }
-
-            closeForm();
-        } catch (err) {
-            setFormError(
-                err?.response?.data?.message ||
-                err?.message ||
-                "Failed to save product"
-            );
-            setSubmitStatus("failed");
-        } finally {
-            setSubmitStatus("idle");
+        if (editingProduct) {
+            await dispatch(updateAdminProductThunk({ id: editingProduct.id, formData }));
+        } else {
+            await dispatch(createAdminProductThunk(formData));
         }
     }
+
+    useEffect(() => {
+        if (submitStatus === "succeeded") {
+            closeForm();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [submitStatus]);
 
     async function onConfirmDelete() {
         if (!deletingProduct) return;
 
-        setDeleteStatus("loading");
-        setDeleteError("");
-
-        try {
-            await api.delete(`/admin/products/${deletingProduct.id}`);
-            setProducts((prev) => prev.filter((item) => item.id !== deletingProduct.id));
+        const action = await dispatch(deleteAdminProductThunk(deletingProduct.id));
+        if (!deleteAdminProductThunk.rejected.match(action)) {
             closeDeleteModal();
-        } catch (err) {
-            setDeleteError(
-                err?.response?.data?.message ||
-                err?.message ||
-                "Failed to delete product"
-            );
-            setDeleteStatus("failed");
-        } finally {
-            setDeleteStatus("idle");
         }
     }
 
@@ -276,15 +225,8 @@ export default function AdminProductsPage() {
                     </button>
                 </div>
 
-                {status === "loading" && (
-                    <p className="muted" style={{ marginBottom: 0 }}>
-                        Loading products...
-                    </p>
-                )}
-
-                {status === "failed" && (
-                    <div className="admin-alert admin-alert--error">{error}</div>
-                )}
+                {status === "loading" && <p className="muted">Loading products...</p>}
+                {status === "failed" && <div className="admin-alert admin-alert--error">{error}</div>}
 
                 {status === "succeeded" && products.length === 0 && (
                     <div className="card" style={{ textAlign: "center", boxShadow: "none" }}>
@@ -311,12 +253,10 @@ export default function AdminProductsPage() {
                                 <th></th>
                             </tr>
                             </thead>
-
                             <tbody>
                             {products.map((product) => (
                                 <tr key={product.id}>
                                     <td>#{product.id}</td>
-
                                     <td>
                                         <div className="admin-product-cell">
                                             <div className="admin-product-thumb">
@@ -334,23 +274,16 @@ export default function AdminProductsPage() {
                                             </div>
 
                                             <div>
-                                                <div style={{ fontWeight: 800 }}>
-                                                    {product.title}
-                                                </div>
+                                                <div style={{ fontWeight: 800 }}>{product.title}</div>
                                                 <div
                                                     className="muted"
-                                                    style={{
-                                                        fontSize: 14,
-                                                        marginTop: 4,
-                                                        maxWidth: 280,
-                                                    }}
+                                                    style={{ fontSize: 14, marginTop: 4, maxWidth: 280 }}
                                                 >
                                                     {product.description || "No description"}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-
                                     <td>
                                         {product.category_name ||
                                             categoryMap.get(Number(product.category_id)) ||
@@ -371,20 +304,20 @@ export default function AdminProductsPage() {
                                                     : "Out of stock"}
                                             </span>
                                     </td>
-                                    <td>{Array.isArray(product.image_urls) ? product.image_urls.length : (product.image_url ? 1 : 0)}</td>
+                                    <td>
+                                        {Array.isArray(product.image_urls)
+                                            ? product.image_urls.length
+                                            : product.image_url
+                                                ? 1
+                                                : 0}
+                                    </td>
                                     <td>{formatDate(product.created_at)}</td>
                                     <td>
                                         <div className="admin-row-actions">
-                                            <button
-                                                className="btn"
-                                                onClick={() => openEditForm(product)}
-                                            >
+                                            <button className="btn" onClick={() => openEditForm(product)}>
                                                 Edit
                                             </button>
-                                            <button
-                                                className="btn"
-                                                onClick={() => openDeleteModal(product)}
-                                            >
+                                            <button className="btn" onClick={() => openDeleteModal(product)}>
                                                 Delete
                                             </button>
                                         </div>
@@ -414,10 +347,7 @@ export default function AdminProductsPage() {
                                     Fill in the product details below.
                                 </p>
                             </div>
-
-                            <button className="btn" onClick={closeForm}>
-                                Close
-                            </button>
+                            <button className="btn" onClick={closeForm}>Close</button>
                         </div>
 
                         <form onSubmit={onSubmitForm} className="admin-form-grid">
@@ -511,12 +441,7 @@ export default function AdminProductsPage() {
 
                             <label className="admin-field admin-field--full">
                                 <span>Upload Photos</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={onFilesChange}
-                                />
+                                <input type="file" accept="image/*" multiple onChange={onFilesChange} />
                                 {selectedFiles.length > 0 && (
                                     <div className="muted" style={{ fontSize: 14 }}>
                                         {selectedFiles.length} file(s) selected
@@ -530,52 +455,42 @@ export default function AdminProductsPage() {
                                         <input
                                             type="checkbox"
                                             checked={form.replace_images}
-                                            onChange={(e) =>
-                                                updateField("replace_images", e.target.checked)
-                                            }
+                                            onChange={(e) => updateField("replace_images", e.target.checked)}
                                         />
                                         Replace existing images instead of adding to them
                                     </span>
                                 </label>
                             )}
 
-                            {editingProduct && Array.isArray(editingProduct.image_urls) && editingProduct.image_urls.length > 0 && (
-                                <div className="admin-field admin-field--full">
-                                    <span>Current Photos</span>
-                                    <div className="admin-thumb-list">
-                                        {editingProduct.image_urls.map((url, idx) => (
-                                            <img
-                                                key={`${url}-${idx}`}
-                                                src={url}
-                                                alt={`product-${idx}`}
-                                                className="admin-thumb-list__img"
-                                            />
-                                        ))}
+                            {editingProduct &&
+                                Array.isArray(editingProduct.image_urls) &&
+                                editingProduct.image_urls.length > 0 && (
+                                    <div className="admin-field admin-field--full">
+                                        <span>Current Photos</span>
+                                        <div className="admin-thumb-list">
+                                            {editingProduct.image_urls.map((url, idx) => (
+                                                <img
+                                                    key={`${url}-${idx}`}
+                                                    src={url}
+                                                    alt={`product-${idx}`}
+                                                    className="admin-thumb-list__img"
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {formError && (
+                            {(localFormError || submitError) && (
                                 <div className="admin-alert admin-alert--error admin-field--full">
-                                    {formError}
+                                    {localFormError || submitError}
                                 </div>
                             )}
 
                             <div className="admin-form-actions admin-field--full">
-                                <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={closeForm}
-                                    disabled={submitStatus === "loading"}
-                                >
+                                <button type="button" className="btn" onClick={closeForm} disabled={submitStatus === "loading"}>
                                     Cancel
                                 </button>
-
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    disabled={submitStatus === "loading"}
-                                >
+                                <button type="submit" className="btn btn-primary" disabled={submitStatus === "loading"}>
                                     {submitStatus === "loading"
                                         ? "Saving..."
                                         : editingProduct
@@ -606,30 +521,16 @@ export default function AdminProductsPage() {
                         </div>
 
                         <p style={{ marginTop: 0 }}>
-                            Are you sure you want to delete{" "}
-                            <strong>{deletingProduct.title}</strong>?
+                            Are you sure you want to delete <strong>{deletingProduct.title}</strong>?
                         </p>
 
-                        {deleteError && (
-                            <div className="admin-alert admin-alert--error">
-                                {deleteError}
-                            </div>
-                        )}
+                        {deleteError && <div className="admin-alert admin-alert--error">{deleteError}</div>}
 
                         <div className="admin-form-actions">
-                            <button
-                                className="btn"
-                                onClick={closeDeleteModal}
-                                disabled={deleteStatus === "loading"}
-                            >
+                            <button className="btn" onClick={closeDeleteModal} disabled={deleteStatus === "loading"}>
                                 Cancel
                             </button>
-
-                            <button
-                                className="btn btn-danger"
-                                onClick={onConfirmDelete}
-                                disabled={deleteStatus === "loading"}
-                            >
+                            <button className="btn btn-danger" onClick={onConfirmDelete} disabled={deleteStatus === "loading"}>
                                 {deleteStatus === "loading" ? "Deleting..." : "Delete"}
                             </button>
                         </div>

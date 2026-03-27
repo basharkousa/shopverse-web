@@ -8,6 +8,11 @@ import homeReducer from "../features/home/homeSlice.js";
 import cartReducer from '../features/cart/cartSlice';
 import ordersReducer from "../features/orders/ordersSlice";
 
+import adminOverviewReducer from "../features/admin/adminOverviewSlice";
+import adminProductsReducer from "../features/admin/adminProductsSlice";
+import adminOrdersReducer from "../features/admin/adminOrdersSlice";
+
+
 export const store = configureStore({
     reducer: {
         ui: uiReducer,
@@ -18,5 +23,8 @@ export const store = configureStore({
         home: homeReducer,
         cart: cartReducer,
         orders: ordersReducer,
+        adminOverview: adminOverviewReducer,
+        adminProducts: adminProductsReducer,
+        adminOrders: adminOrdersReducer,
     },
 });
