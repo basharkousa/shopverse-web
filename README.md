@@ -114,3 +114,10 @@ git checkout dev
 git pull
 git checkout -b feature/sprint1-frontend
 ```
+## After signup, promote a user to admin:
+
+```bash
+UPDATE users
+SET role = 'admin'
+WHERE email = 'admin@example.com';
+```
