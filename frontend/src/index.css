@@ -562,3 +562,56 @@ textarea:focus {
   border: 1px solid var(--border);
   background: #f8fafc;
 }
+
+/* ================================
+   Admin Order Details
+================================== */
+
+.admin-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-summary-card__label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-summary-card__value {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.admin-details-grid {
+  align-items: start;
+}
+
+.admin-detail-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-detail-list__label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.admin-order-update-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  .admin-order-update-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
