@@ -5,13 +5,13 @@ import productsReducer from "../features/products/productsSlice";
 import productDetailsReducer from "../features/products/productDetailsSlice.js";
 import relatedProductsReducer from "../features/products/relatedProductsSlice.js";
 import homeReducer from "../features/home/homeSlice.js";
-import cartReducer from '../features/cart/cartSlice';
+import cartReducer from "../features/cart/cartSlice";
 import ordersReducer from "../features/orders/ordersSlice";
+import paymentReducer from "../features/payments/paymentSlice";
 
 import adminOverviewReducer from "../features/admin/adminOverviewSlice";
 import adminProductsReducer from "../features/admin/adminProductsSlice";
 import adminOrdersReducer from "../features/admin/adminOrdersSlice";
-
 
 export const store = configureStore({
     reducer: {
@@ -23,6 +23,7 @@ export const store = configureStore({
         home: homeReducer,
         cart: cartReducer,
         orders: ordersReducer,
+        payment: paymentReducer,
         adminOverview: adminOverviewReducer,
         adminProducts: adminProductsReducer,
         adminOrders: adminOrdersReducer,

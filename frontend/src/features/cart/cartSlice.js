@@ -1,8 +1,8 @@
-import { createSlice,createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "../../shared/api/client";
 
-export const placeOrderThunk = createAsyncThunk(
-    "cart/placeOrder",
+export const createOrderThunk = createAsyncThunk(
+    "cart/createOrder",
     async ({ shipping, items }, thunkAPI) => {
         try {
             const res = await api.post("/orders", {
@@ -13,7 +13,7 @@ export const placeOrderThunk = createAsyncThunk(
             return res.data.order;
         } catch (err) {
             const msg =
-                err?.response?.data?.message || err?.message || "Order failed";
+                err?.response?.data?.message || err?.message || "Order creation failed";
             return thunkAPI.rejectWithValue(msg);
         }
     }
@@ -27,7 +27,7 @@ const initialState = {
 };
 
 const cartSlice = createSlice({
-    name: 'cart',
+    name: "cart",
     initialState,
     reducers: {
         addToCart: (state, action) => {
@@ -37,7 +37,7 @@ const cartSlice = createSlice({
 
             if (existingItem) {
                 if (
-                    typeof existingItem.stock_qty === 'number' &&
+                    typeof existingItem.stock_qty === "number" &&
                     existingItem.qty < existingItem.stock_qty
                 ) {
                     existingItem.qty += 1;
@@ -69,7 +69,7 @@ const cartSlice = createSlice({
 
             if (Number.isNaN(parsedQty) || parsedQty < 1) return;
 
-            if (typeof item.stock_qty === 'number' && parsedQty > item.stock_qty) {
+            if (typeof item.stock_qty === "number" && parsedQty > item.stock_qty) {
                 item.qty = item.stock_qty;
                 return;
             }
@@ -85,25 +85,27 @@ const cartSlice = createSlice({
             state.checkoutStatus = "idle";
             state.checkoutError = null;
         },
+
+        clearLastOrder: (state) => {
+            state.lastOrder = null;
+        },
     },
     extraReducers: (builder) => {
         builder
-            .addCase(placeOrderThunk.pending, (state) => {
+            .addCase(createOrderThunk.pending, (state) => {
                 state.checkoutStatus = "loading";
                 state.checkoutError = null;
             })
-            .addCase(placeOrderThunk.fulfilled, (state, action) => {
+            .addCase(createOrderThunk.fulfilled, (state, action) => {
                 state.checkoutStatus = "succeeded";
                 state.checkoutError = null;
                 state.lastOrder = action.payload;
-                state.items = [];
             })
-            .addCase(placeOrderThunk.rejected, (state, action) => {
+            .addCase(createOrderThunk.rejected, (state, action) => {
                 state.checkoutStatus = "failed";
-                state.checkoutError = action.payload || "Order failed";
+                state.checkoutError = action.payload || "Order creation failed";
             });
     },
-
 });
 
 export const {
@@ -112,6 +114,7 @@ export const {
     updateQty,
     clearCart,
     clearCheckoutState,
+    clearLastOrder,
 } = cartSlice.actions;
 
 export default cartSlice.reducer;
@@ -122,10 +125,7 @@ export const selectCartCount = (state) =>
     state.cart.items.reduce((sum, item) => sum + item.qty, 0);
 
 export const selectSubtotalCents = (state) =>
-    state.cart.items.reduce(
-        (sum, item) => sum + item.price_cents * item.qty,
-        0
-    );
+    state.cart.items.reduce((sum, item) => sum + item.price_cents * item.qty, 0);
 
 export const selectItemSubtotalCents = (productId) => (state) => {
     const item = state.cart.items.find((item) => item.id === productId);

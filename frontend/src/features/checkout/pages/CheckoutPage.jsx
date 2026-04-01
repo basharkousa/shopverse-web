@@ -2,13 +2,15 @@ import { Link, Navigate } from "react-router-dom";
 import { useMemo, useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    placeOrderThunk,
+    createOrderThunk,
     selectCartItems,
     selectSubtotalCents,
     selectCheckoutError,
     selectCheckoutStatus,
+    selectLastOrder,
     clearCheckoutState,
 } from "../../cart/cartSlice";
+import { selectPaymentMethod } from "../../payments/paymentSlice";
 import { formatMoney } from "../../../utils/formatMoney";
 
 const TAX_RATE = 0.1;
@@ -46,6 +48,9 @@ export default function CheckoutPage() {
     const checkoutStatus = useSelector(selectCheckoutStatus);
     const checkoutError = useSelector(selectCheckoutError);
     const user = useSelector((s) => s.auth.user);
+
+    const lastOrder = useSelector(selectLastOrder);
+    const paymentMethod = useSelector(selectPaymentMethod);
 
     const [shipping, setShipping] = useState({
         name: user?.full_name || "",
@@ -115,7 +120,7 @@ export default function CheckoutPage() {
         }
 
         dispatch(
-            placeOrderThunk({
+            createOrderThunk({
                 shipping,
                 items: items.map((item) => ({
                     product_id: item.id,
@@ -125,12 +130,14 @@ export default function CheckoutPage() {
         );
     }
 
-    if (checkoutStatus === "succeeded") {
+    if (checkoutStatus === "succeeded" && lastOrder?.id) {
         return (
             <Navigate
                 to="/profile"
                 replace
-                state={{ orderSuccess: "Your order was placed successfully." }}
+                state={{
+                    orderSuccess: `Order #${lastOrder.id} created successfully. Payment method: ${paymentMethod}. Payment confirmation will be connected next.`,
+                }}
             />
         );
     }
@@ -154,7 +161,7 @@ export default function CheckoutPage() {
                 <div>
                     <h1 style={{ margin: 0 }}>Checkout</h1>
                     <p className="muted" style={{ margin: "6px 0 0" }}>
-                        Enter your shipping details and review your order.
+                        Enter your shipping details, review your order, and continue to mock payment.
                     </p>
                 </div>
 
@@ -347,16 +354,16 @@ export default function CheckoutPage() {
                             <div
                                 style={{
                                     marginTop: 12,
-                                    padding: 14,
+                                    padding: 12,
+                                    border: "1px solid #e9ecef",
                                     borderRadius: 12,
                                     background: "#f8f9fa",
-                                    border: "1px solid #e9ecef",
                                 }}
                             >
-                                <div style={{ fontWeight: 700 }}>Sandbox Payment Placeholder</div>
-                                <p className="muted" style={{ margin: "8px 0 0" }}>
-                                    Stripe test / sandbox payment will be connected in the next step.
-                                </p>
+                                <div style={{ fontWeight: 700 }}>Mock Payment</div>
+                                <div className="muted" style={{ marginTop: 6, fontSize: 14 }}>
+                                    Sandbox-style payment flow for Sprint 6. Order will be created first, then payment confirmation will complete the checkout flow.
+                                </div>
                             </div>
                         </section>
                     </div>

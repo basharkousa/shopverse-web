@@ -46,8 +46,12 @@ app.use('/categories', categoriesRoutes);
 const ordersRoutes = require('./src/features/orders/orders.routes');
 app.use('/orders', ordersRoutes);
 
+const paymentsRoutes = require('./src/features/payments/payments.routes');
+app.use("/payments", paymentsRoutes);
+
 const adminRoutes = require('./src/features/admin/admin.routes');
 app.use('/admin', adminRoutes);
+
 
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');
