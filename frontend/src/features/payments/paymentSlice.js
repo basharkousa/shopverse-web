@@ -44,6 +44,7 @@ const paymentSlice = createSlice({
             .addCase(confirmMockPaymentThunk.pending, (state) => {
                 state.status = "loading";
                 state.error = null;
+                state.lastPayment = null;
             })
             .addCase(confirmMockPaymentThunk.fulfilled, (state, action) => {
                 state.status = "succeeded";

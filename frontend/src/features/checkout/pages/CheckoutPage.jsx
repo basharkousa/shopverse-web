@@ -76,7 +76,6 @@ function validateCard(values) {
     return errors;
 }
 
-
 export default function CheckoutPage() {
     const dispatch = useDispatch();
 
@@ -88,9 +87,6 @@ export default function CheckoutPage() {
     const paymentStatus = useSelector(selectPaymentStatus);
     const paymentError = useSelector(selectPaymentError);
     const user = useSelector((s) => s.auth.user);
-
-    const canRetryExistingPayment = Boolean(lastOrder?.id && paymentStatus === "failed");
-
 
     const [shipping, setShipping] = useState({
         name: user?.full_name || "",
@@ -130,7 +126,11 @@ export default function CheckoutPage() {
     }, [dispatch]);
 
     useEffect(() => {
-        if (checkoutStatus === "succeeded" && lastOrder?.id && paymentStatus === "idle") {
+        if (
+            checkoutStatus === "succeeded" &&
+            lastOrder?.id &&
+            paymentStatus === "idle"
+        ) {
             dispatch(
                 confirmMockPaymentThunk({
                     orderId: lastOrder.id,
@@ -153,11 +153,23 @@ export default function CheckoutPage() {
     const cardErrors = useMemo(() => validateCard(card), [card]);
 
     const isFormValid =
-        Object.keys(shippingErrors).length === 0 && Object.keys(cardErrors).length === 0;
+        Object.keys(shippingErrors).length === 0 &&
+        Object.keys(cardErrors).length === 0;
 
     const taxCents = Math.round(subtotalCents * TAX_RATE);
     const shippingCents = SHIPPING_CENTS;
     const totalCents = subtotalCents + taxCents + shippingCents;
+
+    const canRetryExistingPayment = Boolean(
+        lastOrder?.id && paymentStatus === "failed"
+    );
+
+    function markTouched(key) {
+        setTouched((prev) => ({
+            ...prev,
+            [key]: true,
+        }));
+    }
 
     function handleShippingChange(e) {
         const { name, value } = e.target;
@@ -175,19 +187,35 @@ export default function CheckoutPage() {
         }));
     }
 
-    function markTouched(key) {
-        setTouched((prev) => ({
-            ...prev,
-            [key]: true,
-        }));
+    function showFieldError(key, message) {
+        return Boolean((touched[key] || submitAttempted) && message);
     }
 
-    function showError(fieldName, groupErrors) {
-        return Boolean((touched[fieldName] || submitAttempted) && groupErrors[fieldName]);
+    function handleRetryPayment() {
+        if (!lastOrder?.id || paymentStatus === "loading") return;
+
+        dispatch(clearPaymentState());
+        dispatch(
+            confirmMockPaymentThunk({
+                orderId: lastOrder.id,
+                card,
+            })
+        );
+    }
+
+    function handleStartFresh() {
+        dispatch(clearPaymentState());
+        dispatch(clearCheckoutState());
+        dispatch(clearLastOrder());
     }
 
     function handleSubmit(e) {
         e.preventDefault();
+
+        if (checkoutStatus === "loading" || paymentStatus === "loading") {
+            return;
+        }
+
         setSubmitAttempted(true);
 
         if (!isFormValid) {
@@ -204,7 +232,6 @@ export default function CheckoutPage() {
             return;
         }
 
-        // If order already exists and payment failed, retry payment for same order
         if (lastOrder?.id && paymentStatus === "failed") {
             dispatch(clearPaymentState());
             dispatch(
@@ -216,7 +243,6 @@ export default function CheckoutPage() {
             return;
         }
 
-        // Fresh checkout attempt => create new order
         dispatch(clearPaymentState());
         dispatch(clearCheckoutState());
 
@@ -227,18 +253,6 @@ export default function CheckoutPage() {
                     product_id: item.id,
                     quantity: item.qty,
                 })),
-            })
-        );
-    }
-
-    function handleRetryPayment() {
-        if (!lastOrder?.id) return;
-
-        dispatch(clearPaymentState());
-        dispatch(
-            confirmMockPaymentThunk({
-                orderId: lastOrder.id,
-                card,
             })
         );
     }
@@ -275,7 +289,8 @@ export default function CheckoutPage() {
                 <div>
                     <h1 style={{ margin: 0 }}>Checkout</h1>
                     <p className="muted" style={{ margin: "6px 0 0" }}>
-                        Enter your shipping details, review your order, and complete mock payment.
+                        Enter your shipping details, review your order, and complete mock
+                        payment.
                     </p>
                 </div>
 
@@ -295,7 +310,8 @@ export default function CheckoutPage() {
                             marginBottom: 16,
                         }}
                     >
-                        Please fill in all required shipping and payment fields before confirming your order.
+                        Please fill in all required shipping and payment fields before
+                        confirming your order.
                     </div>
                 )}
 
@@ -334,20 +350,31 @@ export default function CheckoutPage() {
 
                         {lastOrder?.id && (
                             <div style={{ marginTop: 8, fontSize: 14 }}>
-                                Your order #{lastOrder.id} is still saved as pending. You can retry payment without losing your cart.
+                                Your order #{lastOrder.id} is still saved as pending. You can
+                                retry payment without losing your cart.
                             </div>
                         )}
 
                         {lastOrder?.id && (
-                            <button
-                                type="button"
-                                className="btn"
-                                onClick={handleRetryPayment}
-                                style={{ marginTop: 12 }}
-                                disabled={paymentStatus === "loading"}
-                            >
-                                Retry Payment
-                            </button>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={handleRetryPayment}
+                                    disabled={paymentStatus === "loading"}
+                                >
+                                    Retry Payment
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={handleStartFresh}
+                                    disabled={paymentStatus === "loading"}
+                                >
+                                    Start Fresh
+                                </button>
+                            </div>
                         )}
                     </div>
                 )}
@@ -387,11 +414,17 @@ export default function CheckoutPage() {
                                         placeholder="Enter full name"
                                         value={shipping.name}
                                         onChange={handleShippingChange}
-                                        onBlur={() => setTouched((prev) => ({ ...prev, shippingName: true }))}
-                                        aria-invalid={showError("shippingName", { shippingName: shippingErrors.name })}
+                                        onBlur={() => markTouched("shippingName")}
                                     />
-                                    {showError("shippingName", { shippingName: shippingErrors.name }) && (
-                                        <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                    {showFieldError("shippingName", shippingErrors.name) && (
+                                        <div
+                                            style={{
+                                                marginTop: 6,
+                                                color: "#c92a2a",
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                            }}
+                                        >
                                             {shippingErrors.name}
                                         </div>
                                     )}
@@ -413,10 +446,16 @@ export default function CheckoutPage() {
                                         value={shipping.city}
                                         onChange={handleShippingChange}
                                         onBlur={() => markTouched("city")}
-                                        aria-invalid={showError("city", shippingErrors)}
                                     />
-                                    {showError("city", shippingErrors) && (
-                                        <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                    {showFieldError("city", shippingErrors.city) && (
+                                        <div
+                                            style={{
+                                                marginTop: 6,
+                                                color: "#c92a2a",
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                            }}
+                                        >
                                             {shippingErrors.city}
                                         </div>
                                     )}
@@ -438,10 +477,16 @@ export default function CheckoutPage() {
                                         value={shipping.address}
                                         onChange={handleShippingChange}
                                         onBlur={() => markTouched("address")}
-                                        aria-invalid={showError("address", shippingErrors)}
                                     />
-                                    {showError("address", shippingErrors) && (
-                                        <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                    {showFieldError("address", shippingErrors.address) && (
+                                        <div
+                                            style={{
+                                                marginTop: 6,
+                                                color: "#c92a2a",
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                            }}
+                                        >
                                             {shippingErrors.address}
                                         </div>
                                     )}
@@ -463,10 +508,16 @@ export default function CheckoutPage() {
                                         value={shipping.phone}
                                         onChange={handleShippingChange}
                                         onBlur={() => markTouched("phone")}
-                                        aria-invalid={showError("phone", shippingErrors)}
                                     />
-                                    {showError("phone", shippingErrors) && (
-                                        <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                    {showFieldError("phone", shippingErrors.phone) && (
+                                        <div
+                                            style={{
+                                                marginTop: 6,
+                                                color: "#c92a2a",
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                            }}
+                                        >
                                             {shippingErrors.phone}
                                         </div>
                                     )}
@@ -486,10 +537,13 @@ export default function CheckoutPage() {
                                     border: "1px solid #e9ecef",
                                 }}
                             >
-                                <div style={{ fontWeight: 700, marginBottom: 10 }}>Mock Sandbox Payment</div>
+                                <div style={{ fontWeight: 700, marginBottom: 10 }}>
+                                    Mock Sandbox Payment
+                                </div>
                                 <p className="muted" style={{ margin: "0 0 14px" }}>
                                     Use <strong>4242424242424242</strong> for success or{" "}
-                                    <strong>4000000000000002</strong> to simulate a failed payment.
+                                    <strong>4000000000000002</strong> to simulate a failed
+                                    payment.
                                 </p>
 
                                 <div
@@ -515,8 +569,15 @@ export default function CheckoutPage() {
                                             onChange={handleCardChange}
                                             onBlur={() => markTouched("cardName")}
                                         />
-                                        {(touched.cardName || submitAttempted) && cardErrors.name && (
-                                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                        {showFieldError("cardName", cardErrors.name) && (
+                                            <div
+                                                style={{
+                                                    marginTop: 6,
+                                                    color: "#c92a2a",
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
                                                 {cardErrors.name}
                                             </div>
                                         )}
@@ -539,8 +600,15 @@ export default function CheckoutPage() {
                                             onChange={handleCardChange}
                                             onBlur={() => markTouched("number")}
                                         />
-                                        {showError("number", cardErrors) && (
-                                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                        {showFieldError("number", cardErrors.number) && (
+                                            <div
+                                                style={{
+                                                    marginTop: 6,
+                                                    color: "#c92a2a",
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
                                                 {cardErrors.number}
                                             </div>
                                         )}
@@ -563,8 +631,15 @@ export default function CheckoutPage() {
                                             onChange={handleCardChange}
                                             onBlur={() => markTouched("expiry")}
                                         />
-                                        {showError("expiry", cardErrors) && (
-                                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                        {showFieldError("expiry", cardErrors.expiry) && (
+                                            <div
+                                                style={{
+                                                    marginTop: 6,
+                                                    color: "#c92a2a",
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
                                                 {cardErrors.expiry}
                                             </div>
                                         )}
@@ -587,8 +662,15 @@ export default function CheckoutPage() {
                                             onChange={handleCardChange}
                                             onBlur={() => markTouched("cvc")}
                                         />
-                                        {showError("cvc", cardErrors) && (
-                                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                        {showFieldError("cvc", cardErrors.cvc) && (
+                                            <div
+                                                style={{
+                                                    marginTop: 6,
+                                                    color: "#c92a2a",
+                                                    fontSize: 13,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
                                                 {cardErrors.cvc}
                                             </div>
                                         )}
@@ -672,7 +754,13 @@ export default function CheckoutPage() {
                                     <strong>{formatMoney(shippingCents)}</strong>
                                 </div>
 
-                                <hr style={{ border: 0, borderTop: "1px solid #eee", margin: "4px 0" }} />
+                                <hr
+                                    style={{
+                                        border: 0,
+                                        borderTop: "1px solid #eee",
+                                        margin: "4px 0",
+                                    }}
+                                />
 
                                 <div
                                     style={{
