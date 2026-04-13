@@ -19,6 +19,7 @@ import {
     clearPaymentState,
 } from "../../payments/paymentSlice";
 import { formatMoney } from "../../../utils/formatMoney";
+import { showToast } from "../../../store/uiSlice";
 
 const TAX_RATE = 0.1;
 const SHIPPING_CENTS = 500;
@@ -148,6 +149,29 @@ export default function CheckoutPage() {
             setRedirectAfterSuccess(true);
         }
     }, [paymentStatus, dispatch]);
+
+
+    useEffect(() => {
+        if (paymentStatus === "succeeded") {
+            dispatch(
+                showToast({
+                    type: "success",
+                    message: "Payment completed successfully.",
+                })
+            );
+        }
+    }, [paymentStatus, dispatch]);
+
+    useEffect(() => {
+        if (paymentStatus === "failed" && paymentError) {
+            dispatch(
+                showToast({
+                    type: "error",
+                    message: paymentError,
+                })
+            );
+        }
+    }, [paymentStatus, paymentError, dispatch]);
 
     const shippingErrors = useMemo(() => validateShipping(shipping), [shipping]);
     const cardErrors = useMemo(() => validateCard(card), [card]);

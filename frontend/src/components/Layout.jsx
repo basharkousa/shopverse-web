@@ -1,17 +1,19 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
+import ToastContainer from "./ToastContainer.jsx";
 
 export default function Layout() {
     return (
         <div className="app-shell">
-           <Header/>
+            <Header />
 
             <main className="app-main">
                 <Outlet />
             </main>
 
-            <Footer/>
+            <Footer />
+            <ToastContainer />
         </div>
     );
 }

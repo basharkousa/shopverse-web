@@ -1,244 +1,168 @@
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import {
-    fetchMyOrdersThunk,
-    selectOrders,
-    selectOrdersError,
-    selectOrdersStatus,
-} from "../../orders/ordersSlice";
+import { Link, useLocation } from "react-router-dom";
+import { fetchMyOrdersThunk } from "../../orders/ordersSlice";
+import { showToast } from "../../../store/uiSlice";
+import { formatMoney } from "../../../utils/formatMoney";
+import StateMessage from "../../../components/StateMessage.jsx";
 
-function formatDate(iso) {
-    if (!iso) return "-";
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "2-digit",
-    });
-}
+function getStatusClass(status) {
+    const value = String(status || "").toLowerCase();
 
-function formatMoney(cents) {
-    return `€${(Number(cents || 0) / 100).toFixed(2)}`;
+    if (value === "paid") return "status-pill status-pill--paid";
+    if (value === "shipped") return "status-pill status-pill--shipped";
+    if (value === "cancelled") return "status-pill status-pill--cancelled";
+    return "status-pill status-pill--pending";
 }
 
 export default function ProfilePage() {
     const dispatch = useDispatch();
     const location = useLocation();
 
-    const user = useSelector((s) => s.auth.user);
-    const orders = useSelector(selectOrders);
-    const ordersStatus = useSelector(selectOrdersStatus);
-    const ordersError = useSelector(selectOrdersError);
-
-    const orderSuccess = location.state?.orderSuccess;
+    const user = useSelector((state) => state.auth.user);
+    const orders = useSelector((state) => state.orders.items || []);
+    const ordersStatus = useSelector((state) => state.orders.status);
+    const ordersError = useSelector((state) => state.orders.error);
 
     useEffect(() => {
-        if (ordersStatus === "idle") {
-            dispatch(fetchMyOrdersThunk());
+        dispatch(fetchMyOrdersThunk());
+    }, [dispatch]);
+
+    useEffect(() => {
+        const successMessage = location.state?.orderSuccess;
+        if (successMessage) {
+            dispatch(
+                showToast({
+                    type: "success",
+                    message: successMessage,
+                })
+            );
+            window.history.replaceState({}, document.title);
         }
-    }, [dispatch, ordersStatus]);
+    }, [location.state, dispatch]);
 
     return (
         <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
-            <div style={{ display: "grid", gap: 16 }}>
-                {orderSuccess && (
-                    <div
-                        className="card"
-                        style={{
-                            background: "#ebfbee",
-                            borderColor: "#b2f2bb",
-                            color: "#2b8a3e",
-                        }}
-                    >
-                        {orderSuccess}
+            <div style={{ marginBottom: 18 }}>
+                <h1 style={{ margin: 0 }}>My Profile</h1>
+                <p className="muted" style={{ margin: "6px 0 0" }}>
+                    Review your account details and your order history.
+                </p>
+            </div>
+
+            <section className="card" style={{ marginBottom: 18 }}>
+                <h3 style={{ marginTop: 0 }}>Account Information</h3>
+
+                <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+                    <div>
+                        <strong>Name:</strong> {user?.full_name || "—"}
                     </div>
-                )}
-
-                <div className="card">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        <div>
-                            <h2 style={{ margin: 0 }}>My Profile</h2>
-                            <p className="muted" style={{ marginTop: 6 }}>
-                                Manage your account and view your orders.
-                            </p>
-                        </div>
-
-                        <button className="btn" type="button" disabled>
-                            Edit Profile (Coming Soon)
-                        </button>
+                    <div>
+                        <strong>Email:</strong> {user?.email || "—"}
                     </div>
-
-                    <div
-                        style={{
-                            marginTop: 16,
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
-                            gap: 12,
-                        }}
-                    >
-                        <div>
-                            <div className="muted" style={{ fontSize: 13 }}>
-                                Full Name
-                            </div>
-                            <div style={{ fontWeight: 700 }}>{user?.full_name || "-"}</div>
-                        </div>
-
-                        <div>
-                            <div className="muted" style={{ fontSize: 13 }}>
-                                Email
-                            </div>
-                            <div style={{ fontWeight: 700 }}>{user?.email || "-"}</div>
-                        </div>
-
-                        <div>
-                            <div className="muted" style={{ fontSize: 13 }}>
-                                Role
-                            </div>
-                            <div style={{ fontWeight: 700 }}>{user?.role || "-"}</div>
-                        </div>
-
-                        <div>
-                            <div className="muted" style={{ fontSize: 13 }}>
-                                Registered
-                            </div>
-                            <div style={{ fontWeight: 700 }}>
-                                {formatDate(user?.created_at)}
-                            </div>
-                        </div>
+                    <div>
+                        <strong>Role:</strong> {user?.role || "customer"}
                     </div>
                 </div>
+            </section>
 
-                <div className="card">
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            flexWrap: "wrap",
-                        }}
-                    >
+            <section className="card">
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        marginBottom: 12,
+                    }}
+                >
+                    <div>
                         <h3 style={{ margin: 0 }}>My Orders</h3>
-                        <div className="muted" style={{ fontSize: 14 }}>
-                            Track order status (Pending / Paid / Shipped / Cancelled)
-                        </div>
+                        <p className="muted" style={{ margin: "6px 0 0" }}>
+                            Track your past and current orders.
+                        </p>
                     </div>
 
-                    {ordersStatus === "loading" && (
-                        <div style={{ marginTop: 12 }} className="muted">
-                            Loading orders...
-                        </div>
-                    )}
+                    <Link to="/catalog" className="btn" style={{ textDecoration: "none" }}>
+                        Continue Shopping
+                    </Link>
+                </div>
 
-                    {ordersStatus === "failed" && (
-                        <div
-                            className="card"
-                            style={{
-                                marginTop: 12,
-                                background: "#fff5f5",
-                                borderColor: "#ffc9c9",
-                                color: "#c92a2a",
-                            }}
-                        >
-                            {ordersError}
-                        </div>
-                    )}
+                {ordersStatus === "loading" && (
+                    <StateMessage
+                        type="info"
+                        title="Loading orders"
+                        message="Please wait while we fetch your order history."
+                    />
+                )}
 
-                    <div style={{ marginTop: 12, overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                {ordersStatus === "failed" && (
+                    <StateMessage
+                        type="error"
+                        title="Could not load orders"
+                        message={ordersError || "Something went wrong while loading your orders."}
+                        action={
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => dispatch(fetchMyOrdersThunk())}
+                            >
+                                Retry
+                            </button>
+                        }
+                    />
+                )}
+
+                {ordersStatus === "succeeded" && orders.length === 0 && (
+                    <StateMessage
+                        type="empty"
+                        title="No orders yet"
+                        message="You have not placed any orders yet."
+                        action={
+                            <Link
+                                to="/catalog"
+                                className="btn btn-primary"
+                                style={{ textDecoration: "none" }}
+                            >
+                                Start Shopping
+                            </Link>
+                        }
+                    />
+                )}
+
+                {ordersStatus === "succeeded" && orders.length > 0 && (
+                    <div className="admin-table-wrap" style={{ marginTop: 12 }}>
+                        <table className="admin-table" style={{ minWidth: 620 }}>
                             <thead>
-                            <tr style={{ textAlign: "left" }}>
-                                <th style={{ padding: "10px 8px", borderBottom: "1px solid #eee" }}>
-                                    Order ID
-                                </th>
-                                <th style={{ padding: "10px 8px", borderBottom: "1px solid #eee" }}>
-                                    Date
-                                </th>
-                                <th style={{ padding: "10px 8px", borderBottom: "1px solid #eee" }}>
-                                    Total
-                                </th>
-                                <th style={{ padding: "10px 8px", borderBottom: "1px solid #eee" }}>
-                                    Status
-                                </th>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
                             </tr>
                             </thead>
-
                             <tbody>
-                            {ordersStatus !== "loading" && orders.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} style={{ padding: 16 }} className="muted">
-                                        No orders yet.
+                            {orders.map((order) => (
+                                <tr key={order.id}>
+                                    <td>#{order.id}</td>
+                                    <td>
+                                        {order.created_at
+                                            ? new Date(order.created_at).toLocaleDateString()
+                                            : "—"}
+                                    </td>
+                                    <td>{formatMoney(order.total_cents || 0)}</td>
+                                    <td>
+                      <span className={getStatusClass(order.status)}>
+                        {order.status || "pending"}
+                      </span>
                                     </td>
                                 </tr>
-                            ) : (
-                                orders.map((o) => (
-                                    <tr key={o.id}>
-                                        <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            #{o.id}
-                                        </td>
-                                        <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            {formatDate(o.created_at)}
-                                        </td>
-                                        <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            {formatMoney(o.total_cents)}
-                                        </td>
-                                        <td style={{ padding: "10px 8px", borderBottom: "1px solid #f2f2f2" }}>
-                                            <StatusTag status={o.status} />
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                            ))}
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
+                )}
+            </section>
         </div>
-    );
-}
-
-function StatusTag({ status }) {
-    const s = String(status || "").toLowerCase();
-
-    let bg = "#f2f2f2";
-    let color = "#333";
-
-    if (s === "paid") {
-        bg = "#e7f5ff";
-        color = "#0b7285";
-    } else if (s === "shipped") {
-        bg = "#ebfbee";
-        color = "#2b8a3e";
-    } else if (s === "cancelled") {
-        bg = "#fff5f5";
-        color = "#c92a2a";
-    } else if (s === "pending") {
-        bg = "#fff9db";
-        color = "#a07900";
-    }
-
-    return (
-        <span
-            style={{
-                display: "inline-block",
-                padding: "4px 10px",
-                borderRadius: 999,
-                background: bg,
-                color,
-                fontWeight: 700,
-                fontSize: 12,
-            }}
-        >
-            {(status || "Pending").toString()}
-        </span>
     );
 }

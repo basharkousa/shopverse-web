@@ -1,260 +1,268 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import ProductCard from "../components/ProductCard";
-import {
-    clearFilters,
-    fetchProductsThunk,
-    setFilters,
-    setPage,
-} from "../productsSlice";
+import ProductCard from "../components/ProductCard.jsx";
+import { fetchProductsThunk } from "../productsSlice";
+import StateMessage from "../../../components/StateMessage.jsx";
 
-function eurosToCents(value) {
-    const n = Number(String(value).replace(",", "."));
-    if (!Number.isFinite(n)) return undefined;
-    return Math.round(n * 100);
-}
+const DEFAULT_LIMIT = 8;
 
 export default function CatalogPage() {
     const dispatch = useDispatch();
 
-    const { items, page, limit, totalItems, totalPages, filters, status, error } =
-        useSelector((s) => s.products);
+    const productsState = useSelector((state) => state.products);
+    const items = productsState.items || [];
+    const meta = productsState.meta || {};
+    const status = productsState.status;
+    const error = productsState.error;
 
-    const { q, category, minPrice, maxPrice, minRating } = filters;
+    const [search, setSearch] = useState("");
+    const [query, setQuery] = useState("");
+    const [category, setCategory] = useState("");
+    const [minPrice, setMinPrice] = useState("");
+    const [maxPrice, setMaxPrice] = useState("");
+    const [page, setPage] = useState(1);
 
-    // Build params object for backend
-    const params = useMemo(() => {
-        return {
-            page,
-            limit,
-            q: q.trim() || undefined,
-            category: category || undefined,
-            minPrice: minPrice ? eurosToCents(minPrice) : undefined,
-            maxPrice: maxPrice ? eurosToCents(maxPrice) : undefined,
-            minRating: minRating ? Number(minRating) : undefined,
-        };
-    }, [page, limit, q, category, minPrice, maxPrice, minRating]);
-
-    // Fetch products when params change
     useEffect(() => {
-        dispatch(fetchProductsThunk(params));
-    }, [dispatch, params]);
+        dispatch(
+            fetchProductsThunk({
+                page,
+                limit: DEFAULT_LIMIT,
+                q: query || undefined,
+                category: category || undefined,
+                minPrice: minPrice || undefined,
+                maxPrice: maxPrice || undefined,
+            })
+        );
+    }, [dispatch, page, query, category, minPrice, maxPrice]);
 
-    function onSearchSubmit(e) {
+    const categories = useMemo(() => {
+        const set = new Set(items.map((item) => item.category).filter(Boolean));
+        return Array.from(set);
+    }, [items]);
+
+    function handleSubmit(e) {
         e.preventDefault();
-        dispatch(setPage(1));
-        dispatch(fetchProductsThunk({ ...params, page: 1 }));
+        setPage(1);
+        setQuery(search.trim());
     }
 
-    function onClear() {
-        dispatch(clearFilters());
+    function handleReset() {
+        setSearch("");
+        setQuery("");
+        setCategory("");
+        setMinPrice("");
+        setMaxPrice("");
+        setPage(1);
     }
 
-    function goPrev() {
-        dispatch(setPage(Math.max(1, page - 1)));
-    }
-
-    function goNext() {
-        if (totalPages && page >= totalPages) return;
-        dispatch(setPage(page + 1));
-    }
+    const totalPages = meta.totalPages || 1;
+    const totalItems = meta.total || 0;
 
     return (
         <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
-            <h2 style={{ marginTop: 0 }}>Catalog</h2>
+            <div style={{ marginBottom: 18 }}>
+                <h1 style={{ margin: 0 }}>Catalog</h1>
+                <p className="muted" style={{ margin: "6px 0 0" }}>
+                    Browse products, search, and filter by category or price.
+                </p>
+            </div>
 
-            {/* Search + results */}
-            <div className="card" style={{ display: "grid", gap: 12, marginTop: 12 }}>
+            <section className="card" style={{ marginBottom: 18 }}>
                 <form
-                    onSubmit={onSearchSubmit}
-                    style={{ display: "flex", gap: 10, flexWrap: "wrap" }}
+                    onSubmit={handleSubmit}
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
+                        gap: 12,
+                        alignItems: "end",
+                    }}
                 >
-                    <input
-                        value={q}
-                        onChange={(e) => dispatch(setFilters({ q: e.target.value }))}
-                        placeholder="Search products..."
-                        style={{
-                            flex: "1 1 240px",
-                            padding: 10,
-                            borderRadius: 10,
-                            border: "1px solid #ddd",
-                        }}
-                    />
-                    <button className="btn" type="submit">
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Search
+                        </label>
+                        <input
+                            className="input"
+                            type="text"
+                            placeholder="Search products..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Category
+                        </label>
+                        <select
+                            value={category}
+                            onChange={(e) => {
+                                setPage(1);
+                                setCategory(e.target.value);
+                            }}
+                        >
+                            <option value="">All</option>
+                            {categories.map((value) => (
+                                <option key={value} value={value}>
+                                    {value}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Min Price
+                        </label>
+                        <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            value={minPrice}
+                            onChange={(e) => {
+                                setPage(1);
+                                setMinPrice(e.target.value);
+                            }}
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Max Price
+                        </label>
+                        <input
+                            className="input"
+                            type="number"
+                            min="0"
+                            placeholder="999"
+                            value={maxPrice}
+                            onChange={(e) => {
+                                setPage(1);
+                                setMaxPrice(e.target.value);
+                            }}
+                        />
+                    </div>
+
+                    <button type="submit" className="btn btn-primary">
                         Search
                     </button>
-                    <button className="btn" type="button" onClick={onClear}>
-                        Clear
+
+                    <button type="button" className="btn" onClick={handleReset}>
+                        Reset
                     </button>
                 </form>
+            </section>
 
-                <div className="muted" style={{ fontSize: 14 }}>
-                    {totalItems} products found
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    alignItems: "center",
+                    marginBottom: 14,
+                    flexWrap: "wrap",
+                }}
+            >
+                <div className="muted">
+                    {status === "succeeded" ? `${totalItems} products found` : "Loading products..."}
+                </div>
+
+                <div className="muted">
+                    Page {page} of {totalPages}
                 </div>
             </div>
 
-            {/* Filters + grid */}
-            <div
-                style={{
-                    marginTop: 12,
-                    display: "grid",
-                    gridTemplateColumns: "280px 1fr",
-                    gap: 12,
-                    alignItems: "start",
-                }}
-            >
-                {/* Filters */}
-                <div className="card">
-                    <h3 style={{ marginTop: 0 }}>Filters</h3>
+            {status === "loading" && (
+                <StateMessage
+                    type="info"
+                    title="Loading products"
+                    message="Please wait while we fetch the latest catalog items."
+                />
+            )}
 
-                    <div style={{ display: "grid", gap: 12 }}>
-                        <label style={{ display: "grid", gap: 6 }}>
-                            <span style={{ fontWeight: 700 }}>Category</span>
-                            <select
-                                value={category}
-                                onChange={(e) =>
-                                    dispatch(setFilters({ category: e.target.value }))
-                                }
-                                style={{
-                                    padding: 10,
-                                    borderRadius: 10,
-                                    border: "1px solid #ddd",
-                                }}
-                            >
-                                <option value="">All</option>
-                                <option value="1">Electronics</option>
-                                <option value="2">Fashion</option>
-                                <option value="3">Home</option>
-                                <option value="4">Sports</option>
-                            </select>
-                        </label>
-
-                        <div style={{ display: "grid", gap: 6 }}>
-                            <span style={{ fontWeight: 700 }}>Price range (€)</span>
-                            <div style={{ display: "flex", gap: 8 }}>
-                                <input
-                                    value={minPrice}
-                                    onChange={(e) =>
-                                        dispatch(setFilters({ minPrice: e.target.value }))
-                                    }
-                                    placeholder="Min"
-                                    inputMode="numeric"
-                                    style={{
-                                        width: "100%",
-                                        padding: 10,
-                                        borderRadius: 10,
-                                        border: "1px solid #ddd",
-                                    }}
-                                />
-                                <input
-                                    value={maxPrice}
-                                    onChange={(e) =>
-                                        dispatch(setFilters({ maxPrice: e.target.value }))
-                                    }
-                                    placeholder="Max"
-                                    inputMode="numeric"
-                                    style={{
-                                        width: "100%",
-                                        padding: 10,
-                                        borderRadius: 10,
-                                        border: "1px solid #ddd",
-                                    }}
-                                />
-                            </div>
-                            <div className="muted" style={{ fontSize: 12 }}>
-                                We convert € to cents when calling the API.
-                            </div>
-                        </div>
-
-                        <label style={{ display: "grid", gap: 6 }}>
-                            <span style={{ fontWeight: 700 }}>Rating</span>
-                            <select
-                                value={minRating}
-                                onChange={(e) =>
-                                    dispatch(setFilters({ minRating: e.target.value }))
-                                }
-                                style={{
-                                    padding: 10,
-                                    borderRadius: 10,
-                                    border: "1px solid #ddd",
-                                }}
-                            >
-                                <option value="">All</option>
-                                <option value="1">1+ stars</option>
-                                <option value="2">2+ stars</option>
-                                <option value="3">3+ stars</option>
-                                <option value="4">4+ stars</option>
-                                <option value="5">5 stars</option>
-                            </select>
-                        </label>
-                    </div>
-                </div>
-
-                {/* Grid */}
-                <div style={{ display: "grid", gap: 12 }}>
-                    {status === "loading" ? (
-                        <div className="card">Loading products…</div>
-                    ) : status === "failed" ? (
-                        <div
-                            className="card"
-                            style={{
-                                borderColor: "#f5c2c7",
-                                background: "#f8d7da",
-                                color: "#842029",
-                            }}
+            {status === "failed" && (
+                <StateMessage
+                    type="error"
+                    title="Could not load products"
+                    message={error || "Something went wrong while loading the catalog."}
+                    action={
+                        <button
+                            className="btn btn-primary"
+                            onClick={() =>
+                                dispatch(
+                                    fetchProductsThunk({
+                                        page,
+                                        limit: DEFAULT_LIMIT,
+                                        q: query || undefined,
+                                        category: category || undefined,
+                                        minPrice: minPrice || undefined,
+                                        maxPrice: maxPrice || undefined,
+                                    })
+                                )
+                            }
                         >
-                            {error}
-                        </div>
-                    ) : items.length === 0 ? (
-                        <div className="card" style={{ textAlign: "center" }}>
-                            <div style={{ fontWeight: 800 }}>No results</div>
-                            <div className="muted" style={{ marginTop: 6 }}>
-                                Try changing search or filters.
-                            </div>
-                        </div>
-                    ) : (
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(3, 1fr)",
-                                gap: 12,
-                            }}
-                        >
-                            {items.map((p) => (
-                                <ProductCard key={p.id} product={p} />
-                            ))}
-                        </div>
-                    )}
+                            Retry
+                        </button>
+                    }
+                />
+            )}
 
-                    {/* Pagination */}
+            {status === "succeeded" && items.length === 0 && (
+                <StateMessage
+                    type="empty"
+                    title="No products found"
+                    message="Try changing your search keyword or filters."
+                    action={
+                        <button className="btn" onClick={handleReset}>
+                            Clear Filters
+                        </button>
+                    }
+                />
+            )}
+
+            {status === "succeeded" && items.length > 0 && (
+                <>
                     <div
-                        className="card"
+                        className="catalog-grid-4"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                            gap: 16,
+                        }}
+                    >
+                        {items.map((product) => (
+                            <ProductCard key={product.id} product={product} />
+                        ))}
+                    </div>
+
+                    <div
                         style={{
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            gap: 12,
+                            justifyContent: "center",
+                            gap: 10,
+                            marginTop: 20,
                             flexWrap: "wrap",
                         }}
                     >
-                        <button className="btn" onClick={goPrev} disabled={page <= 1}>
-                            Prev
+                        <button
+                            className="btn"
+                            disabled={page <= 1}
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                        >
+                            Previous
                         </button>
-
-                        <div className="muted">
-                            Page {page} {totalPages ? `of ${totalPages}` : ""}
-                        </div>
 
                         <button
                             className="btn"
-                            onClick={goNext}
-                            disabled={totalPages ? page >= totalPages : false}
+                            disabled={page >= totalPages}
+                            onClick={() => setPage((prev) => prev + 1)}
                         >
                             Next
                         </button>
                     </div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 }

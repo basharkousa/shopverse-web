@@ -16,6 +16,8 @@ import {
     selectAdminProductDeleteStatus,
     selectAdminProductDeleteError,
 } from "../adminProductsSlice";
+import { showToast } from "../../../store/uiSlice";
+import StateMessage from "../../../components/StateMessage.jsx";
 
 const EMPTY_FORM = {
     title: "",
@@ -69,6 +71,56 @@ export default function AdminProductsPage() {
         dispatch(fetchAdminProductsThunk());
     }, [dispatch]);
 
+    useEffect(() => {
+        if (submitStatus === "succeeded") {
+            dispatch(
+                showToast({
+                    type: "success",
+                    message: editingProduct
+                        ? "Product updated successfully."
+                        : "Product created successfully.",
+                })
+            );
+            closeForm();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [submitStatus, dispatch]);
+
+    useEffect(() => {
+        if (submitStatus === "failed" && submitError) {
+            dispatch(
+                showToast({
+                    type: "error",
+                    message: submitError,
+                })
+            );
+        }
+    }, [submitStatus, submitError, dispatch]);
+
+    useEffect(() => {
+        if (deleteStatus === "succeeded") {
+            dispatch(
+                showToast({
+                    type: "success",
+                    message: "Product deleted successfully.",
+                })
+            );
+            closeDeleteModal();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deleteStatus, dispatch]);
+
+    useEffect(() => {
+        if (deleteStatus === "failed" && deleteError) {
+            dispatch(
+                showToast({
+                    type: "error",
+                    message: deleteError,
+                })
+            );
+        }
+    }, [deleteStatus, deleteError, dispatch]);
+
     const categoryMap = useMemo(() => {
         const map = new Map();
         for (const c of categories) {
@@ -94,7 +146,9 @@ export default function AdminProductsPage() {
             description: product.description || "",
             price_cents: product.price_cents == null ? "" : String(product.price_cents),
             image_url: product.image_url || "",
-            image_urls: Array.isArray(product.image_urls) ? product.image_urls.join("\n") : "",
+            image_urls: Array.isArray(product.image_urls)
+                ? product.image_urls.join("\n")
+                : "",
             category_id: product.category_id == null ? "" : String(product.category_id),
             rating: product.rating == null ? "" : String(product.rating),
             stock_qty: product.stock_qty == null ? "" : String(product.stock_qty),
@@ -193,20 +247,37 @@ export default function AdminProductsPage() {
         }
     }
 
-    useEffect(() => {
-        if (submitStatus === "succeeded") {
-            closeForm();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [submitStatus]);
-
     async function onConfirmDelete() {
         if (!deletingProduct) return;
+        await dispatch(deleteAdminProductThunk(deletingProduct.id));
+    }
 
-        const action = await dispatch(deleteAdminProductThunk(deletingProduct.id));
-        if (!deleteAdminProductThunk.rejected.match(action)) {
-            closeDeleteModal();
-        }
+    if (status === "loading") {
+        return (
+            <StateMessage
+                type="info"
+                title="Loading products"
+                message="Please wait while admin products are being loaded."
+            />
+        );
+    }
+
+    if (status === "failed") {
+        return (
+            <StateMessage
+                type="error"
+                title="Could not load products"
+                message={error || "Something went wrong while loading admin products."}
+                action={
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => dispatch(fetchAdminProductsThunk())}
+                    >
+                        Retry
+                    </button>
+                }
+            />
+        );
     }
 
     return (
@@ -225,19 +296,19 @@ export default function AdminProductsPage() {
                     </button>
                 </div>
 
-                {status === "loading" && <p className="muted">Loading products...</p>}
-                {status === "failed" && <div className="admin-alert admin-alert--error">{error}</div>}
-
-                {status === "succeeded" && products.length === 0 && (
-                    <div className="card" style={{ textAlign: "center", boxShadow: "none" }}>
-                        <div style={{ fontWeight: 800 }}>No products found</div>
-                        <div className="muted" style={{ marginTop: 6 }}>
-                            Create your first product to start managing the catalog.
-                        </div>
-                    </div>
-                )}
-
-                {status === "succeeded" && products.length > 0 && (
+                {products.length === 0 ? (
+                    <StateMessage
+                        type="empty"
+                        compact
+                        title="No products found"
+                        message="Create your first product to start managing the catalog."
+                        action={
+                            <button className="btn btn-primary" onClick={openAddForm}>
+                                Create Product
+                            </button>
+                        }
+                    />
+                ) : (
                     <div className="admin-table-wrap">
                         <table className="admin-table">
                             <thead>
@@ -292,17 +363,17 @@ export default function AdminProductsPage() {
                                     <td>{formatMoney(product.price_cents)}</td>
                                     <td>{Number(product.rating || 0).toFixed(1)}</td>
                                     <td>
-                                            <span
-                                                className={
-                                                    Number(product.stock_qty) > 0
-                                                        ? "status-pill status-pill--paid"
-                                                        : "status-pill status-pill--cancelled"
-                                                }
-                                            >
-                                                {Number(product.stock_qty) > 0
-                                                    ? `${product.stock_qty} in stock`
-                                                    : "Out of stock"}
-                                            </span>
+                      <span
+                          className={
+                              Number(product.stock_qty) > 0
+                                  ? "status-pill status-pill--paid"
+                                  : "status-pill status-pill--cancelled"
+                          }
+                      >
+                        {Number(product.stock_qty) > 0
+                            ? `${product.stock_qty} in stock`
+                            : "Out of stock"}
+                      </span>
                                     </td>
                                     <td>
                                         {Array.isArray(product.image_urls)
@@ -347,7 +418,9 @@ export default function AdminProductsPage() {
                                     Fill in the product details below.
                                 </p>
                             </div>
-                            <button className="btn" onClick={closeForm}>Close</button>
+                            <button className="btn" onClick={closeForm}>
+                                Close
+                            </button>
                         </div>
 
                         <form onSubmit={onSubmitForm} className="admin-form-grid">
@@ -442,23 +515,23 @@ export default function AdminProductsPage() {
                             <label className="admin-field admin-field--full">
                                 <span>Upload Photos</span>
                                 <input type="file" accept="image/*" multiple onChange={onFilesChange} />
-                                {selectedFiles.length > 0 && (
-                                    <div className="muted" style={{ fontSize: 14 }}>
-                                        {selectedFiles.length} file(s) selected
-                                    </div>
-                                )}
+                                <div className="muted" style={{ fontSize: 14 }}>
+                                    {selectedFiles.length > 0
+                                        ? `${selectedFiles.length} file(s) selected`
+                                        : "You can upload multiple photos here."}
+                                </div>
                             </label>
 
                             {editingProduct && (
                                 <label className="admin-field admin-field--full">
-                                    <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={form.replace_images}
-                                            onChange={(e) => updateField("replace_images", e.target.checked)}
-                                        />
-                                        Replace existing images instead of adding to them
-                                    </span>
+                  <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                        type="checkbox"
+                        checked={form.replace_images}
+                        onChange={(e) => updateField("replace_images", e.target.checked)}
+                    />
+                    Replace existing images instead of adding to them
+                  </span>
                                 </label>
                             )}
 
@@ -487,10 +560,19 @@ export default function AdminProductsPage() {
                             )}
 
                             <div className="admin-form-actions admin-field--full">
-                                <button type="button" className="btn" onClick={closeForm} disabled={submitStatus === "loading"}>
+                                <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={closeForm}
+                                    disabled={submitStatus === "loading"}
+                                >
                                     Cancel
                                 </button>
-                                <button type="submit" className="btn btn-primary" disabled={submitStatus === "loading"}>
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={submitStatus === "loading"}
+                                >
                                     {submitStatus === "loading"
                                         ? "Saving..."
                                         : editingProduct
@@ -524,13 +606,23 @@ export default function AdminProductsPage() {
                             Are you sure you want to delete <strong>{deletingProduct.title}</strong>?
                         </p>
 
-                        {deleteError && <div className="admin-alert admin-alert--error">{deleteError}</div>}
+                        {deleteError && (
+                            <div className="admin-alert admin-alert--error">{deleteError}</div>
+                        )}
 
                         <div className="admin-form-actions">
-                            <button className="btn" onClick={closeDeleteModal} disabled={deleteStatus === "loading"}>
+                            <button
+                                className="btn"
+                                onClick={closeDeleteModal}
+                                disabled={deleteStatus === "loading"}
+                            >
                                 Cancel
                             </button>
-                            <button className="btn btn-danger" onClick={onConfirmDelete} disabled={deleteStatus === "loading"}>
+                            <button
+                                className="btn btn-danger"
+                                onClick={onConfirmDelete}
+                                disabled={deleteStatus === "loading"}
+                            >
                                 {deleteStatus === "loading" ? "Deleting..." : "Delete"}
                             </button>
                         </div>

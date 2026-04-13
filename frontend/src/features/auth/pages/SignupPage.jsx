@@ -1,163 +1,208 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { signupThunk, clearAuthError } from "../authSlice";
+import { signupThunk } from "../authSlice";
+import { showToast } from "../../../store/uiSlice";
+
+function validate(values) {
+    const errors = {};
+
+    if (!values.full_name.trim()) {
+        errors.full_name = "Full name is required";
+    }
+
+    if (!values.email.trim()) {
+        errors.email = "Email is required";
+    }
+
+    if (!values.password.trim()) {
+        errors.password = "Password is required";
+    } else if (values.password.length < 6) {
+        errors.password = "Password must be at least 6 characters";
+    }
+
+    if (!values.confirmPassword.trim()) {
+        errors.confirmPassword = "Please confirm your password";
+    } else if (values.password !== values.confirmPassword) {
+        errors.confirmPassword = "Passwords do not match";
+    }
+
+    return errors;
+}
 
 export default function SignupPage() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
 
-    const { status, error, user } = useSelector((s) => s.auth);
+    const authStatus = useSelector((state) => state.auth.status);
+    const authError = useSelector((state) => state.auth.error);
+    const token = useSelector((state) => state.auth.token);
 
-    const [fullName, setFullName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [form, setForm] = useState({
+        full_name: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+    });
 
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [localError, setLocalError] = useState(null);
+    const [touched, setTouched] = useState({
+        full_name: false,
+        email: false,
+        password: false,
+        confirmPassword: false,
+    });
 
-    // If signup succeeds, redirect to login
+    const [submitAttempted, setSubmitAttempted] = useState(false);
+
+    const errors = validate(form);
+    const isValid = Object.keys(errors).length === 0;
+
     useEffect(() => {
-        // We consider signup success when we got a user and status succeeded
-        if (status === "succeeded" && user) {
-            navigate("/login");
+        if (authStatus === "failed" && authError) {
+            dispatch(
+                showToast({
+                    type: "error",
+                    message: authError,
+                })
+            );
         }
-    }, [status, user, navigate]);
+    }, [authStatus, authError, dispatch]);
 
-    function onSubmit(e) {
+    function markTouched(key) {
+        setTouched((prev) => ({ ...prev, [key]: true }));
+    }
+
+    function handleChange(e) {
+        const { name, value } = e.target;
+        setForm((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    }
+
+    function handleSubmit(e) {
         e.preventDefault();
-        dispatch(clearAuthError());
+        setSubmitAttempted(true);
 
-        setLocalError(null);
-
-        if (password !== confirmPassword) {
-            setLocalError("Passwords do not match");
+        if (!isValid) {
+            setTouched({
+                full_name: true,
+                email: true,
+                password: true,
+                confirmPassword: true,
+            });
             return;
         }
 
         dispatch(
             signupThunk({
-                full_name: fullName,
-                email,
-                password,
+                full_name: form.full_name,
+                email: form.email,
+                password: form.password,
             })
         );
     }
 
+    if (token) {
+        return <Navigate to="/" replace />;
+    }
+
     return (
-        <div className="container" style={{ paddingTop: 32 }}>
-            <div className="card" style={{ maxWidth: 420, margin: "0 auto" }}>
-                <h2 style={{ marginTop: 0 }}>Create account</h2>
+        <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
+            <div className="card" style={{ maxWidth: 560, margin: "0 auto" }}>
+                <h1 style={{ marginTop: 0 }}>Create Account</h1>
                 <p className="muted" style={{ marginTop: 8 }}>
-                    Fill your details to sign up.
+                    Register to start shopping on ShopVerse.
                 </p>
 
-                {error && (
-                    <div
-                        style={{
-                            marginTop: 12,
-                            padding: 12,
-                            borderRadius: 10,
-                            border: "1px solid #f5c2c7",
-                            background: "#f8d7da",
-                            color: "#842029",
-                        }}
-                    >
-                        {error}
-                    </div>
-                )}
-
-                {localError && (
-                    <div style={{
-                        marginTop: 12,
-                        padding: 12,
-                        borderRadius: 10,
-                        border: "1px solid #f5c2c7",
-                        background: "#f8d7da",
-                        color: "#842029",
-                    }}>
-                        {localError}
-                    </div>
-                )}
-
-                <form
-                    onSubmit={onSubmit}
-                    style={{ marginTop: 16, display: "grid", gap: 12 }}
-                >
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Full name</span>
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14, marginTop: 18 }}>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Full Name
+                        </label>
                         <input
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
+                            className="input"
                             type="text"
-                            placeholder="Your name"
-                            required
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="full_name"
+                            value={form.full_name}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("full_name")}
+                            placeholder="Enter your full name"
                         />
-                    </label>
+                        {(touched.full_name || submitAttempted) && errors.full_name && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.full_name}
+                            </div>
+                        )}
+                    </div>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Email</span>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Email
+                        </label>
                         <input
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            className="input"
                             type="email"
-                            placeholder="you@example.com"
-                            required
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="email"
+                            value={form.email}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("email")}
+                            placeholder="Enter your email"
                         />
-                    </label>
+                        {(touched.email || submitAttempted) && errors.email && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.email}
+                            </div>
+                        )}
+                    </div>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Password</span>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Password
+                        </label>
                         <input
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            className="input"
                             type="password"
-                            placeholder="At least 6 characters"
-                            required
-                            minLength={6}
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="password"
+                            value={form.password}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("password")}
+                            placeholder="Enter your password"
                         />
-                    </label>
+                        {(touched.password || submitAttempted) && errors.password && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.password}
+                            </div>
+                        )}
+                    </div>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Confirm Password</span>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Confirm Password
+                        </label>
                         <input
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="input"
                             type="password"
-                            placeholder="Repeat password"
-                            required
-                            minLength={6}
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="confirmPassword"
+                            value={form.confirmPassword}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("confirmPassword")}
+                            placeholder="Confirm your password"
                         />
-                    </label>
+                        {(touched.confirmPassword || submitAttempted) && errors.confirmPassword && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.confirmPassword}
+                            </div>
+                        )}
+                    </div>
 
-                    <button className="btn" type="submit" disabled={status === "loading"}>
-                        {status === "loading" ? "Creating..." : "Create account"}
+                    <button className="btn btn-primary" type="submit" disabled={authStatus === "loading"}>
+                        {authStatus === "loading" ? "Creating Account..." : "Sign Up"}
                     </button>
                 </form>
 
-                <div style={{ marginTop: 14 }} className="muted">
-                    Already have an account? <Link to="/login">Login</Link>
-                </div>
+                <p className="muted" style={{ marginTop: 16 }}>
+                    Already have an account? <Link to="/login">Sign in</Link>
+                </p>
             </div>
         </div>
     );

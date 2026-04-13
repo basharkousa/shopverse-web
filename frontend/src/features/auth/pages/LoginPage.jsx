@@ -1,96 +1,144 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { loginThunk, clearAuthError } from "../authSlice";
+import { loginThunk } from "../authSlice";
+import { showToast } from "../../../store/uiSlice";
+
+function validate(values) {
+    const errors = {};
+
+    if (!values.email.trim()) {
+        errors.email = "Email is required";
+    }
+
+    if (!values.password.trim()) {
+        errors.password = "Password is required";
+    }
+
+    return errors;
+}
 
 export default function LoginPage() {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
 
-    const { status, error, token } = useSelector((s) => s.auth);
+    const authStatus = useSelector((state) => state.auth.status);
+    const authError = useSelector((state) => state.auth.error);
+    const token = useSelector((state) => state.auth.token);
 
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [form, setForm] = useState({
+        email: "",
+        password: "",
+    });
 
-    // If login succeeds (token exists), navigate away
+    const [touched, setTouched] = useState({
+        email: false,
+        password: false,
+    });
+
+    const [submitAttempted, setSubmitAttempted] = useState(false);
+
+    const errors = validate(form);
+    const isValid = Object.keys(errors).length === 0;
+
     useEffect(() => {
-        if (token) navigate("/");
-    }, [token, navigate]);
+        if (authStatus === "failed" && authError) {
+            dispatch(
+                showToast({
+                    type: "error",
+                    message: authError,
+                })
+            );
+        }
+    }, [authStatus, authError, dispatch]);
 
-    function onSubmit(e) {
+    function markTouched(key) {
+        setTouched((prev) => ({ ...prev, [key]: true }));
+    }
+
+    function handleChange(e) {
+        const { name, value } = e.target;
+        setForm((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
+    }
+
+    function handleSubmit(e) {
         e.preventDefault();
-        dispatch(clearAuthError());
-        dispatch(loginThunk({ email, password }));
+        setSubmitAttempted(true);
+
+        if (!isValid) {
+            setTouched({
+                email: true,
+                password: true,
+            });
+            return;
+        }
+
+        dispatch(loginThunk(form));
+    }
+
+    if (token) {
+        return <Navigate to="/" replace />;
     }
 
     return (
-        <div className="container" style={{ paddingTop: 32 }}>
-            <div className="card" style={{ maxWidth: 420, margin: "0 auto" }}>
-                <h2 style={{ marginTop: 0 }}>Login</h2>
+        <div className="container" style={{ paddingTop: 24, paddingBottom: 24 }}>
+            <div className="card" style={{ maxWidth: 520, margin: "0 auto" }}>
+                <h1 style={{ marginTop: 0 }}>Login</h1>
                 <p className="muted" style={{ marginTop: 8 }}>
-                    Enter your email and password.
+                    Sign in to your ShopVerse account.
                 </p>
 
-                {error && (
-                    <div
-                        style={{
-                            marginTop: 12,
-                            padding: 12,
-                            borderRadius: 10,
-                            border: "1px solid #f5c2c7",
-                            background: "#f8d7da",
-                            color: "#842029",
-                        }}
-                    >
-                        {error}
-                    </div>
-                )}
-
-                <form
-                    onSubmit={onSubmit}
-                    style={{ marginTop: 16, display: "grid", gap: 12 }}
-                >
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Email</span>
+                <form onSubmit={handleSubmit} style={{ display: "grid", gap: 14, marginTop: 18 }}>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Email
+                        </label>
                         <input
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            className="input"
                             type="email"
-                            placeholder="you@example.com"
-                            required
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="email"
+                            value={form.email}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("email")}
+                            placeholder="Enter your email"
                         />
-                    </label>
+                        {(touched.email || submitAttempted) && errors.email && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.email}
+                            </div>
+                        )}
+                    </div>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>Password</span>
+                    <div>
+                        <label style={{ display: "block", marginBottom: 6, fontWeight: 700 }}>
+                            Password
+                        </label>
                         <input
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            className="input"
                             type="password"
-                            placeholder="••••••••"
-                            required
-                            minLength={6}
-                            style={{
-                                padding: 10,
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                            }}
+                            name="password"
+                            value={form.password}
+                            onChange={handleChange}
+                            onBlur={() => markTouched("password")}
+                            placeholder="Enter your password"
                         />
-                    </label>
+                        {(touched.password || submitAttempted) && errors.password && (
+                            <div style={{ marginTop: 6, color: "#c92a2a", fontSize: 13, fontWeight: 600 }}>
+                                {errors.password}
+                            </div>
+                        )}
+                    </div>
 
-                    <button className="btn btn-primary" type="submit" disabled={status === "loading"}>
-                        {status === "loading" ? "Logging in..." : "Login"}
+                    <button className="btn btn-primary" type="submit" disabled={authStatus === "loading"}>
+                        {authStatus === "loading" ? "Signing In..." : "Sign In"}
                     </button>
                 </form>
 
-                <div style={{ marginTop: 14 }} className="muted">
+                <p className="muted" style={{ marginTop: 16 }}>
                     Don’t have an account? <Link to="/signup">Create one</Link>
-                </div>
+                </p>
             </div>
         </div>
     );
