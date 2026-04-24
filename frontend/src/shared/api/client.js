@@ -1,8 +1,26 @@
-import axios from "axios";
-import { getToken } from "../../features/auth/authStorage";
+import axios from 'axios';
+import { getToken } from '../../features/auth/authStorage';
+
+function getApiBaseUrl() {
+    const envUrl = import.meta.env.VITE_API_URL?.trim();
+
+    if (envUrl) {
+        return envUrl.replace(/\/+$/, '');
+    }
+
+    const isLocalhost =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1';
+
+    if (isLocalhost) {
+        return 'http://localhost:5000';
+    }
+
+    return '';
+}
 
 export const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL,
+    baseURL: getApiBaseUrl(),
     withCredentials: true,
 });
 
@@ -17,6 +35,6 @@ api.interceptors.request.use((config) => {
 
 // Example request function (for testing)
 export async function getHealth() {
-    const res = await api.get("/health");
+    const res = await api.get('/health');
     return res.data;
 }

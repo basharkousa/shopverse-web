@@ -16,8 +16,43 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // ----- CORS -----
+function parseAllowedOrigins() {
+  const rawOrigins = [
+    process.env.CLIENT_URL,
+    process.env.FRONTEND_URL,
+    process.env.RENDER_EXTERNAL_URL,
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
+  ];
+
+  return [
+    ...new Set(
+      rawOrigins.map((origin) => origin && origin.trim()).filter(Boolean)
+    ),
+  ];
+}
+
+const allowedOrigins = parseAllowedOrigins();
+
 const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin(origin, callback) {
+    // allow server-to-server / curl / Postman requests with no origin
+    if (!origin) return callback(null, true);
+
+    // local dev fallback if no env origins are set
+    if (allowedOrigins.length === 0) {
+      const localAllowed = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+      if (localAllowed.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -47,11 +82,10 @@ const ordersRoutes = require('./src/features/orders/orders.routes');
 app.use('/orders', ordersRoutes);
 
 const paymentsRoutes = require('./src/features/payments/payments.routes');
-app.use("/payments", paymentsRoutes);
+app.use('/payments', paymentsRoutes);
 
 const adminRoutes = require('./src/features/admin/admin.routes');
 app.use('/admin', adminRoutes);
-
 
 const { testDbConnection } = require('./src/config/db');
 const asyncHandler = require('./src/utils/asyncHandler');
